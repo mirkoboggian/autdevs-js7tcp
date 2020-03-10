@@ -11,5 +11,13 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Mirko Boggian <mirko.boggian@gmail.com> (http://www.mirkoboggian.com)",
-  "license": "UNLICENSED"
+  "license": "UNLICENSED",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mirkoboggian/s7tcp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/mirkoboggian/s7tcp/issues"
+  },
+  "homepage": "https://github.com/mirkoboggian/s7tcp#readme"
 }
