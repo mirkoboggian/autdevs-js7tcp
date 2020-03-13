@@ -1,86 +1,129 @@
-const S7Comm = require("./s7comm");
-const Net = require("net");
-const Sprintf = require('sprintf-js').sprintf;
+// logger
+const pino = require('pino');
+const logger = pino({ prettyPrint: true });
 
-// Connection procedure
-function onConnection(rack, slot) {
-    socket.once('connect', () => {
-        console.info("Connected to Server!");
-        
-        // Init parameters
-        socket.setTimeout(1000);
-        socket.setKeepAlive(true, 1000);
+// libs
+const events = require('events');
+const net = require('net');
 
-        // Register Session
-        console.info("Register Session Request... ");
-        let bytesToWrite = Uint8Array.from(S7Comm.RegisterSessionRequest(rack, slot));        
-        socket.write(bytesToWrite);
-        socket.once('data', (data) => {
-            let bytesRead = Uint8Array.from(data);
-            if (bytesRead.length != 22) {                
-                throw new Error("Error registering session!");  
-            }
-            else {
-                console.info("Session registered! ");
-            }
 
-            // Negotiate PDU
-            console.info("Negotiate PDU Lenght Request... ");
-            let bytesToWrite = Uint8Array.from(S7Comm.NegotiatePDULengthRequest());
-            socket.write(bytesToWrite);
-            socket.once('data', (data) => {
-                let bytesRead = Uint8Array.from(data);
-                if (bytesRead.length != 27) {                
-                    throw new Error("Error negotiating PDU!");  
-                }
-                else {
-                    console.info("PDU negotiated! ");
 
-                    // Try to read
-                    read(S7Comm.ParameterArea.DB, 1, 0, 10, false);
-                }
-            });
-        });
-    });
+class s7tcp {
+    
+    //#region ctors
+
+    constructor(ip, port, slot, rack, autoreconnect = 0, timeout = 0) {  
+        this.ip = ip;
+        this.port = port;
+        this.slot = slot;
+        this.rack = rack;
+        this.autoreconnect = autoreconnect;
+        this.timeout = timeout;
+
+        this._alreadyConnected = false;
+        this._autoriconnect();
+    }
+
+    //#endregion
+
+    //#region methods
+
+    init() {
+        this.socket = new net.Socket();
+        this.socket.setTimeout(this.timeout);
+        this.socket.setKeepAlive(true, this.timeout);
+
+        // managed events
+        this.socket.on('connect', () => this.onConnect(this));
+        this.socket.on('close', hadError => this.onClose(this, hadError));  
+        this.socket.on('end', () => this.onEnd(this));
+        this.socket.on('ready', () => this.onReady(this));
+        this.socket.on('timeout', () => this.onTimeout(this));
+        this.socket.on('error', err => this.onError(this, err));
+
+        // custom events
+        this.socket.on('registerSession', this.onRegisterSession.bind(this));
+        this.socket.on('negotiatePDU', this.onNegotiatePDU.bind(this));
+        this.socket.on('valuesRead', this.onValuesRead.bind(this));
+        this.socket.on('valuesWritten', this.onValuesWritten.bind(this));     
+    }
+
+    dispose() {   
+        this.socket.end();        
+        this.socket.destroy(new Error('dispose'));
+    }
+
+    connect() {
+        logger.info("Try to connect..");
+        this.socket.connect(this.port, this.ip);
+    }
+
+    _autoriconnect() {        
+        if (this.autoreconnect) {     
+            if (this._alreadyConnected) {
+                setTimeout(() => {            
+                    this.init();
+                    this.connect();
+                }, this.autoreconnect);
+            } else {
+                this.init();
+                this.connect();
+                this._alreadyConnected = true;
+            }                   
+        } 
+    }
+
+    //#endregion
+
+    //#region events
+
+    onConnect(event) {
+        logger.info("Connected!");
+    }
+
+    onClose(event, hadError) {
+        logger.info("Close " + (hadError ? "with" : "without") + " errors!");
+        this._autoriconnect();
+    }
+
+    onEnd(event) {
+        logger.info("Ended!");
+    }
+
+    onReady(event) {
+        logger.info("Ready!");
+    }
+
+    onTimeout(event) {
+        logger.info("Timeout!");
+        this.dispose();
+    }
+
+    onError(event, err) {
+        logger.info("Errors: " + err.message);
+        this.dispose();
+    }
+
+    onRegisterSession(event) {
+        logger.info("Session registered!");
+    }
+
+    onNegotiatePDU(event) {
+        logger.info("PDU negotiated!");
+    }
+
+    onValuesRead(event) {
+        logger.info("Values read!");
+    }
+    
+    onValuesWritten(event) {
+        logger.info("Values written!");
+    }
+
+    //#endregion
+
 }
 
-// ONLY FOR TEST!!
-// MUST CHECK MAX LEN REQUEST and SPLIT MESSAGE!
-function read(parArea, areaNumber, start, len, isBit)
-{
-    // Read DATA request
-    console.info("Read DATA Request... ");
-    let bytesToWrite = Uint8Array.from(S7Comm.ReadRequest(parArea, areaNumber, start, len, isBit));
-    socket.write(bytesToWrite);
-    socket.once('data', (data) => {
-        let bytesRead = Uint8Array.from(data);
-        if (bytesRead.length != 25+len) {                
-            throw new Error("Error reading data!");  
-        }
-        else if (bytesRead[21] != 0xFF) {
-            throw new Error(sprintf("Error reading data! Err. No: 1$d", bytesRead[bytesRead.prototype.length-1]));  
-        } else {
-            console.info("Data read successfully!");
-            dataRead = bytesRead.subarray(25, 25 + len);
-            console.info(dataRead);
-            return dataRead;
-        }
-    });
-}
 
-/******* MAIN PROGRAM CYCLE *******/
-
-try {
-    // Create Socket
-    var socket = new Net.Socket();
-
-    // Loop
-    socket.connect( { host: "192.168.1.91", port: 102, onConnection: onConnection(0, 1) });
-}
-catch (e) {
-    console.error(e);
-    socket._destroy();
-}
-finally {
-    // nothing to do
-}
+// TEST PURPOSE
+var plc = new s7tcp("192.168.1.91", 102, 0, 1, 10000, 60000);

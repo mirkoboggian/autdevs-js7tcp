@@ -18,11 +18,15 @@ exports.DataType = DataType;
 const MAX_PDU_LENGTH = 240;
 const MAX_READ_BYTES = 222;
 const MAX_WRITE_BYTES = 212;
-
-if (Object.freeze)
+if (Object.freeze) {
     Object.freeze(MAX_PDU_LENGTH);
     Object.freeze(MAX_READ_BYTES);
     Object.freeze(MAX_WRITE_BYTES);
+}
+module.exports.MAX_PDU_LENGTH = MAX_PDU_LENGTH;
+module.exports.MAX_READ_BYTES = MAX_READ_BYTES;
+module.exports.MAX_WRITE_BYTES = MAX_WRITE_BYTES;
+
 
 function _EIPHeader(dataLen) {
     // Header bytes

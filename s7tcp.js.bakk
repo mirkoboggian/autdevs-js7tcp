@@ -1,0 +1,219 @@
+var net = require("net");
+var s7comm = require("./s7comm");
+
+var TIMEOUT = 5000;
+var POLLING = 1000;
+
+const _socketConnect = (ip, port) => {
+    return new Promise(resolve => {
+        socket.setTimeout(TIMEOUT); 
+        socket.connect(port, ip);
+        socket.once("connect", () => {
+            return resolve(true);
+        });
+    });
+};
+const _registerSession = (rack, slot) => {
+    return new Promise(resolve => {
+        let request = Uint8Array.from(s7comm.RegisterSessionRequest(rack, slot));
+        let result = socket.write(request, (e) => {
+            if (e) {
+                throw e;
+            };
+            let getResponse = (buffer) => {
+                socket.off("data", getResponse);
+                let response = Uint8Array.from(buffer);
+                if (response.length != 22)
+                {
+                    let e = new Error("Error registering session!"); 
+                    throw e;
+                }                  
+                return resolve(true);
+            };
+            socket.once("data", buffer => getResponse(buffer));
+        });
+    });    
+};
+const _negotiatePDU = () => {
+    return new Promise(resolve => {
+        let request = Uint8Array.from(s7comm.NegotiatePDULengthRequest());
+        let result = socket.write(request, (e) => {
+            if (e) {
+                throw e;
+            };
+            let getResponse = (buffer) => {
+                socket.off("data", getResponse);
+                let response = Uint8Array.from(buffer);
+                if (response.length != 27)
+                {
+                    let e = new Error("Error negotiating PDU!");
+                    throw e;
+                }                  
+                return resolve(true);
+            };
+            socket.once("data", buffer => getResponse(buffer));
+        });
+    });  
+};    
+const _read = (parArea, areaNumber, start, len, isBit = false) => {
+    return new Promise(resolve => {
+        if (len > s7comm.MAX_READ_BYTES) {
+            let e = new Error("'len' is greater than Read Maximum (" + s7comm.MAX_READ_BYTES + ")");
+            throw e;
+        }
+        let request = Uint8Array.from(s7comm.ReadRequest(parArea, areaNumber, start, len, isBit));
+        let result = socket.write(request, (e) => {
+            if (e) {
+                throw e;
+            };
+            let getResponse = (buffer) => {
+                socket.off("data", getResponse);
+                let response = Uint8Array.from(buffer);
+                if (response.length != 25+len) {
+                    let e = new Error("Error on data read request!");
+                    throw e;
+                }
+                if (response[21] != 0xFF){
+                    let e = new Error("Error reading data: ") + response[response.prototype.length-1];
+                    throw e;
+                }
+                let dataRead = response.subarray(25, 25 + len);
+                return resolve(dataRead);
+            };
+            socket.once("data", buffer => getResponse(buffer));
+        });
+    });
+};
+const _write = (parArea, areaNumber, start, values, isBit = false) => {
+    return new Promise(resolve => {
+        let len = values.length;
+        if (len > s7comm.MAX_WRITE_BYTES) {
+            let e = new Error("'data len' is greater than Write Maximum (" + s7comm.MAX_WRITE_BYTES + ")");
+            throw e;
+        }
+        let request = Uint8Array.from(s7comm.WriteRequest(parArea, areaNumber, start, len, isBit, values));
+        let result = socket.write(request, (e) => {
+            if (e) {
+                throw e;
+            };
+            let getResponse = (buffer) => {
+                socket.off("data", getResponse);
+                let response = Uint8Array.from(buffer);
+                if (response.length != 22) {
+                    let e = new Error("Error on data write request!");
+                    throw e;
+                }
+                if (response[21] != 0xFF){
+                    let e = new Error("Error writing data: ") + response[response.prototype.length-1];
+                    throw e;
+                }
+                return resolve(true);
+            };
+            socket.once("data", buffer => getResponse(buffer));
+        });
+    });
+};
+
+async function connect(ip, port, rack, slot) {
+    console.log("Trying to connect..");
+    try {
+        let connected = await _socketConnect(ip, port); 
+        let regSession = await _registerSession(rack, slot);
+        let negPDU = await _negotiatePDU(); 
+        return true;
+    } catch(e) {
+        return false;
+    }
+};
+async function read(parArea, areaNumber, start, len) {
+    try {
+        let data = await _read(parArea, areaNumber, start, len); 
+        return data;
+    } catch (e) {
+        return [];
+    }
+};
+async function write(parArea, areaNumber, start, values) {
+    try {
+        let result = await _write(parArea, areaNumber, start, values); 
+        return result;
+    } catch (e) {
+        return false;
+    }
+};
+
+async function connectAndRead(ip, port, rack, slot, parArea, areaNumber, start, len) {
+    try {
+        if (!connected) 
+            await connect(ip, port, rack, slot);
+        let data = await read(parArea, areaNumber, start, len); 
+        return data;
+    } catch (e) {
+        return [];
+    }
+};
+async function connectAndLoopRead(ip, port, rack, slot, parArea, areaNumber, start, len) {            
+    let loopPromise = async () => {
+        return new Promise(function (resolve, reject) {
+            // connect to device
+            if (!connected) {
+                connect(ip, port, rack, slot)
+                    .catch((error) => {
+                        console.error(error);
+                    });
+            } 
+            // read data on polling tick                  
+            setTimeout(() => {
+                if (connected) {
+                    read(parArea, areaNumber, start, len)
+                        .then(console.log)
+                        .then(() => {return resolve(true)})
+                        .catch((error) => {
+                            console.error(error);
+                        });
+                }
+            }, POLLING);
+        });
+    };
+    while(1)
+    {
+        try {
+            await loopPromise();
+        } catch (e) {
+            return [];
+        }
+    }    
+};
+
+async function connectAndWrite(ip, port, rack, slot, parArea, areaNumber, start, values) {
+    try {
+        if (!connected) 
+            await connect(ip, port, rack, slot);
+        let result = await write(parArea, areaNumber, start, values); 
+        return result;
+    } catch (e) {
+        return [];
+    }
+};
+
+var socket = new net.Socket();
+var connected = false;
+
+socket.on("connect", () => {
+    connected = true; 
+    console.log("Connected? ", connected); 
+});
+socket.on("close", (hasError) => {
+    connected = false; 
+    console.log("Socket closed!");
+    // connectAndLoopRead("192.168.1.91", 102, 0, 1, s7comm.ParameterArea.DB, 1, 0, 200, false);
+});
+socket.on("error", (error) => {
+    console.log("Socket error: " + error);
+    socket.end(); 
+});
+
+//connectAndLoopRead("192.168.1.91", 102, 0, 1, s7comm.ParameterArea.DB, 1, 200, 200, false);
+connectAndWrite("192.168.1.91", 102, 0, 1, s7comm.ParameterArea.DB, 1, 0, [3, 1, 5, 7, 9])
+    .then(read(s7comm.ParameterArea.DB, 1, 0, 5));
+//    .then(console.log);
