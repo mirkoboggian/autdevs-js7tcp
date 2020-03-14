@@ -6,7 +6,8 @@
   "dependencies": {
     "net-socket-reconnect": "0.0.9",
     "pino": "^5.17.0",
-    "pino-pretty": "^3.6.1"
+    "pino-pretty": "^3.6.1",
+    "readwrite-lock": "^1.0.5"
   },
   "devDependencies": {},
   "scripts": {

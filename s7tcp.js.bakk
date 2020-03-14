@@ -58,7 +58,7 @@ const _negotiatePDU = () => {
 const _read = (parArea, areaNumber, start, len, isBit = false) => {
     return new Promise(resolve => {
         if (len > s7comm.MAX_READ_BYTES) {
-            let e = new Error("'len' is greater than Read Maximum (" + s7comm.MAX_READ_BYTES + ")");
+            let e = 
             throw e;
         }
         let request = Uint8Array.from(s7comm.ReadRequest(parArea, areaNumber, start, len, isBit));

@@ -1,0 +1,173 @@
+const net = require('net');
+const events = require('events');
+const s7comm = require("./s7comm");
+var rwlock = require('readwrite-lock');
+
+class S7Socket extends events{
+
+    constructor(ip = "127.0.0.1", port = 102, rack = 0, slot = 2, autoreconnect = 10000, timeout = 60000) {  
+        super();        
+        this.lock = new rwlock();
+        this.ip = ip;
+        this.port = port;
+        this.rack = rack;
+        this.slot = slot;        
+        this.autoreconnect = autoreconnect;
+        this.timeout = timeout;
+    }
+    
+    connect() {
+        let self = this;
+        self._connect();
+    }
+
+    read(parArea, areaNumber, start, len, isBit) {
+        let self = this;
+        self._read(parArea, areaNumber, start, len, isBit);
+        
+    }
+
+    write(parArea, areaNumber, start, isBit, values) {
+        let self = this;
+        self._write(parArea, areaNumber, start, isBit, values);
+    }
+
+    _connect() {
+        if (this._socket) {
+            this._socket.removeAllListeners();
+            this._socket.destroy();
+        }                    
+        this._socket = new net.Socket();
+        this._socket.on('error', (error) => { this._onError(error); });
+        this._socket.setTimeout(this.timeout);
+        this._socket.setKeepAlive(true, this.timeout);    
+        this._socket.connect(this.port, this.ip, () => {
+            let request = Uint8Array.from(s7comm.RegisterSessionRequest(this.rack, this.slot));
+            let result = this._socket.write(request, (e) => {
+                if (e) {
+                    this._onError(e);
+                    return false; 
+                };
+                this._socket.once('data', buffer => {                    
+                    let response = Uint8Array.from(buffer);
+                    if (response.length != 22) {
+                        this._onError(new Error("Error registering session!")); 
+                        return false; 
+                    }
+                    let request = Uint8Array.from(s7comm.NegotiatePDULengthRequest());
+                    let result = this._socket.write(request, (e) => {
+                        if (e) { 
+                            this._onError(e); 
+                            return false 
+                        };
+                        this._socket.once('data', buffer => {
+                            let response = Uint8Array.from(buffer);
+                            if (response.length != 27) {
+                                this._onError(new Error("Error negotiating PDU!"));
+                                return false;
+                            }
+                            this.emit('connected');
+                            return true;
+                        });
+                    });
+                });                
+            });
+        });             
+    }
+
+    _read(parArea, areaNumber, start, len, isBit) {
+        if (len > s7comm.MAX_READ_BYTES) {
+            this._onError(new Error("'len' is greater than Read Maximum (" + s7comm.MAX_READ_BYTES + ")")); 
+            return null; 
+        }
+        let request = Uint8Array.from(s7comm.ReadRequest(parArea, areaNumber, start, len, isBit));
+        let result = this._socket.write(request, (e) => {
+            if (e) { 
+                this._onError(e); 
+                return null; 
+            };
+            this._socket.once('data', buffer => {                    
+                if (buffer.length != 25+len) {
+                    this._onError(new Error("Error on data read request!")); 
+                    return null;
+                }                    
+                if (buffer[21] != 0xFF) {
+                    this._onError(new Error("Error reading data: " + buffer[response.prototype.length-1]));
+                    return null;
+                }                    
+                let data = buffer.subarray(25, 25 + len);                
+                this._onRead(data);
+                return data;
+            }); 
+        });
+    }
+
+    _write(parArea, areaNumber, start, isBit, values) {
+        let len = values.length;
+        if (len > s7comm.MAX_WRITE_BYTES) {
+            this._onError(new Error("'len' is greater than Write Maximum (" + s7comm.MAX_WRITE_BYTES + ")")); 
+            return null;
+        }            
+        let request = Uint8Array.from(s7comm.WriteRequest(parArea, areaNumber, start, isBit, values));
+        let result = this._socket.write(request, (e) => {
+            if (e) {
+                this._onError(e); 
+                return null; 
+            };
+            this._socket.once('data', buffer => {                    
+                if (buffer.length != 22) {
+                    this._onError(new Error("Error on data write request!")); 
+                    return null;
+                }                    
+                if (buffer[21] != 0xFF) {
+                    this._onError(new Error("Error writing data: " + buffer[response.prototype.length-1]));
+                    return null;
+                }                    
+                this._onWrite(values);
+                return values;
+            }); 
+        });
+    }
+
+    _onRead(data) {
+        this.emit('read', data);
+    }
+
+    _onWrite(data) {
+        this.emit('write', data);
+    }
+
+    _onError(error) {
+        this.emit('error', error);
+    }
+}
+
+
+var s7socket = new S7Socket("192.168.1.91", 102, 0, 1, 5000, 30000);
+
+s7socket.on('connected', () => {
+    console.log("CONESSOOOOO!");
+    setInterval(() => {
+          let data = s7socket.read(s7comm.ParameterArea.DB, 1, 0, 10, false);
+    }, 500);
+    setInterval(() => {
+        let now = new Date(Date.now());
+        let values = [1+now.getSeconds(), 2+now.getSeconds(), 3+now.getSeconds(), 4+now.getSeconds(), 5+now.getSeconds(),
+             6+now.getSeconds(), 7+now.getSeconds(), 8+now.getSeconds(), 9+now.getSeconds(), 10+now.getSeconds()];
+        let data = s7socket.write(s7comm.ParameterArea.DB, 1, 0, false, values);
+    }, 500);
+});
+
+s7socket.on('error', (error) => {
+    console.error(error);
+});
+
+s7socket.on('read', (data) => {
+    console.info("READ: ", data);
+});
+
+s7socket.on('write', (data) => {
+    console.warn("WRITE: ", data);
+});
+
+s7socket.connect();

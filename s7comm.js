@@ -1,3 +1,9 @@
+/* SAMPLES */
+// console.log(RegisterSessionRequest(0, 2));
+// console.log(NegotiatePDULengthRequest());
+// console.log(ReadRequest(ParameterArea.DB, 1, 0, 100, false));
+// console.log(WriteRequest(ParameterArea.DB, 1, 0, 10, false, [0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A]));
+
 // Enums
 const CPUType = require("./enums/CPUType");
 const ErrorCode = require("./enums/ErrorCode");
@@ -287,7 +293,7 @@ exports.ReadRequest = (parArea, areaNumber, start, len, isBit) => {
     return eipHeader.concat(cotpHeader).concat(pduHeader).concat(readPars);
 }
 
-exports.WriteRequest = (parArea, areaNumber, start, len, isBit, values) => {
+exports.WriteRequest = (parArea, areaNumber, start, isBit, values) => {
     let writeValues = _WriteValues(values);
     let writeHeader = _WriteValuesHeader(writeValues.length);
     let writePars = _WriteParameters(parArea, areaNumber, start, isBit, writeValues.length);
@@ -296,10 +302,3 @@ exports.WriteRequest = (parArea, areaNumber, start, len, isBit, values) => {
     var eipHeader = _EIPHeader(cotpHeader.length + pduHeader.length + writePars.length + writeHeader.length + writeValues.length);
     return eipHeader.concat(cotpHeader).concat(pduHeader).concat(writePars).concat(writeHeader).concat(writeValues);
 }
-
-
-/* SAMPLES */
-// console.log(RegisterSessionRequest(0, 2));
-// console.log(NegotiatePDULengthRequest());
-// console.log(ReadRequest(ParameterArea.DB, 1, 0, 100, false));
-// console.log(WriteRequest(ParameterArea.DB, 1, 0, 10, false, [0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A]));
