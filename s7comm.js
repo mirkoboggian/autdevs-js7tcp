@@ -273,9 +273,9 @@ exports.WriteRequest = (parArea, areaNumber, start, isBit, values) => {
     ret[30] = (start % 0x100);
     // Write Header Values
     ret[31] = 0x00;
-    ret[32] = 0x04;
-    ret[33] = Math.floor(DATALen * 8 / 0x100);
-    ret[34] = (DATALen * 8 % 0x100);
+    ret[32] = 0x04; // Bit = 3, Counter/Timer = 9, Byte/Word/DWord.. = 4
+    ret[33] = Math.floor(DATALen * 8 / 0x100); // Counter/Timer *= 2, Else *= 8
+    ret[34] = (DATALen * 8 % 0x100); // Counter/Timer *= 2, Else *= 8
     // Add Values    
     ret = ret.concat(values);
     // Return
@@ -299,7 +299,6 @@ exports.MultiReadRequest = (itemsList) => {
     }
     return ret;
 }
-
 // S7 Variable MultiRead Header
 MultiReadHeaderRequest = (itemsCount) => {
     // Consts
@@ -378,6 +377,138 @@ MultiReadItemRequest = (parArea, areaNumber, start, len, isBit) => {
     ret[9] = Math.floor(start / 0x10000);
     ret[10] = Math.floor(start / 0x100);
     ret[11] = (start % 0x100);
+    // Return
+    return ret;
+}
+
+// S7 Variable MultiWrite
+exports.MultiWriteRequest = (itemsList, itemsValues) => {
+    // Request
+    let ret = [];
+    // Assert items count (max 20)
+    let itemsCount = itemsList.length;
+    if (itemsCount > this.MAXITEMSLIST) itemsCount = this.MAXITEMSLIST;
+    // Header
+    ret = ret.concat(MultiWriteHeaderRequest(itemsValues));
+    // Items Add
+    for(let i = 0; i < itemsCount; i++) {
+        let item = itemsList[i];
+        let itemRequest = MultiWriteItemRequest(item.parArea, item.areaNumber, item.start, item.len, item.isBit);
+        ret = ret.concat(itemRequest);
+    }
+    // Values Add
+    for(let i = 0; i < itemsCount; i++) {
+        let itemValues = itemsValues[i];
+        let itemValuesRequest = MultiWriteItemValuesRequest(itemValues);
+        ret = ret.concat(itemValuesRequest);
+    }
+    return ret;
+}
+// S7 Variable MultiRead Header
+MultiWriteHeaderRequest = (itemsValues) => {
+    // Analize values
+    let itemsCount = itemsValues.length;
+    let itemsLen = 0;
+    itemsValues.forEach((entry) => {
+        // Normalize values: Only Even bytes of values
+        if (entry.length % 2 == 1) entry.push(0x00);
+        itemsLen += entry.length + 4;
+    });
+
+    // Consts
+    const TPKTLen = 4;
+    const COTPLen = 3;
+    const PDUHeaderLen = 10; // Request=10, Response=12
+    const ITEMLen = 12;
+    const PUDParLen = itemsCount * ITEMLen + 2; // Write parameter
+    const DATALen = itemsLen;
+    const PDUReqType = PDUType.Request;
+    const SEQNumber = 1280; // Sequence Number ??? 0;
+    const TOTALLen = TPKTLen + COTPLen + PDUHeaderLen + PUDParLen + DATALen;
+    // Request
+    let ret = [];
+    // TPKT (RFC1006 Header)
+    ret[0] = 0x03; // RFC 1006 ID (3) 
+    ret[1] = 0x00; // Reserved, always 0
+    ret[2] = Math.floor(TOTALLen / 0x100); // High part of packet lenght (entire frame, payload and TPDU included)
+    ret[3] = (TOTALLen % 0x100); // Low part of packet lenght (entire frame, payload and TPDU included)
+    // COTP (ISO 8073 Header)
+    ret[4] = 0x02;
+    ret[5] = 0xF0; // Connect on S7comm layer (s7comm.param.func = 0xf0, Setup communication)
+    ret[6] = 0x80; 
+    // PDU Header
+    ret[7] = 0x32; // protocol identifier (S7)
+    ret[8] = PDUReqType; // Job Type
+    ret[9] = 0x00; // Redundancy identification (1)
+    ret[10] = 0x00; // Redundancy identification (2)
+    ret[11] = Math.floor(SEQNumber / 0x100);
+    ret[12] = (SEQNumber % 0x100);
+    ret[13] = Math.floor(PUDParLen / 0x100);
+    ret[14] = (PUDParLen % 0x100);
+    ret[15] = Math.floor(DATALen / 0x100);
+    ret[16] = (DATALen % 0x100);
+    // Read Parameters
+    ret[17] = FunctionCode.Write; // Function
+    ret[18] = itemsCount; // Items count (idx 18)
+    // Return
+    return ret;
+}
+// S7 Variable MultiWrite Item
+MultiWriteItemRequest = (parArea, areaNumber, start, len, isBit) => {
+    // Request
+    let ret = [];
+    ret[0] = 0x12; // Var spec.
+    ret[1] = 0x0A; // Length of remaining bytes
+    ret[2] = 0x10; // Syntax ID 
+    // Transport Size + // Num Elements > length in bytes    
+    switch (parArea)
+    {
+        case ParameterArea.S7200AnalogInput:
+        case ParameterArea.S7200AnalogOutput:
+            ret[3] = DataType.Word;
+            ret[4] = Math.floor(((len + 1) / 2) / 0x100);
+            ret[5] = (((len + 1) / 2) % 0x100);
+            start *= 8;
+            break;
+        case ParameterArea.S7Timer:
+        case ParameterArea.S7Counter:
+        case ParameterArea.S7200Timer:
+        case ParameterArea.S7200Counter:
+            ret[3] = parArea;
+            ret[4] = Math.floor(((len + 1) / 2) / 0x100);
+            ret[5] = (((len + 1) / 2) % 0x100);
+            break;
+        default:
+            ret[3] = (isBit ? DataType.Bit : DataType.Byte);
+            ret[4] = Math.floor(len / 0x100);
+            ret[5] = (len % 0x100);
+            start *= (isBit) ? 1 : 8;
+            break;
+    }
+    // DB Number (if any, else 0) 
+    ret[6] = Math.floor(areaNumber / 0x100);
+    ret[7] = (areaNumber % 0x100);
+    // Area Code
+    ret[8] = parArea;
+    // Start address in bits
+    ret[9] = Math.floor(start / 0x10000);
+    ret[10] = Math.floor(start / 0x100);
+    ret[11] = (start % 0x100);
+    return ret;
+}
+// S7 Variable MultiWrite Values
+MultiWriteItemValuesRequest = (values) => {
+    // Normalize values: Only Even bytes of values
+    if (values.length % 2 == 1) values.push(0x00);
+    // Request
+    let ret = [];
+    // Write Header Values
+    ret[0] = 0x00;
+    ret[1] = 0x04; // Bit = 3, Counter/Timer = 9, Byte/Word/DWord.. = 4
+    ret[2] = Math.floor(values.length * 8 / 0x100); // Counter/Timer *= 2, Else *= 8
+    ret[3] = (values.length * 8 % 0x100); // Counter/Timer *= 2, Else *= 8
+    // Add Values    
+    ret = ret.concat(values);
     // Return
     return ret;
 }
