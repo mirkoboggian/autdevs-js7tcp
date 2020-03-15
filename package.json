@@ -2,7 +2,7 @@
   "name": "s7tcp",
   "version": "1.0.0",
   "description": "S7comm (S7 Communication) is a Siemens proprietary protocol that runs between programmable logic controllers (PLCs) of the Siemens S7-300/400 (S71200/1500) family.",
-  "main": "s7comm.js",
+  "main": "index.js",
   "dependencies": {
     "net-socket-reconnect": "0.0.9",
     "pino": "^5.17.0",
