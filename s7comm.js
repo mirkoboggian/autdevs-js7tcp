@@ -50,21 +50,21 @@ exports.RegisterSessionRequest = (rack, slot) => {
     ret[17] = 0x00, // Src TSAP LO > (will be overwritten) ???
     ret[18] = 0xC2, // Dst TSAP Identifier (Parameter Destination-TSAP)
     ret[19] = 0x02, // Dst TSAP Length (2 bytes)
-    ret[20] = 0x03, // Dst TSAP HI > Communication Type: 1=PG Communication, 2=OP Communication, 3=Step7Basic Communication
+    ret[20] = 0x01, // Dst TSAP HI > Communication Type: 1=PG Communication, 2=OP Communication, 3=Step7Basic Communication
     ret[21] = (rack * 2 * 16 + slot)  // Dst TSAP LO > Slot - Rack (ISO over TCP)
     // Return
     return ret;
 }
 
 // S7 PDU Negotiation Telegram (contains also ISO Header and COTP Header)
-exports.exports.NegotiatePDULengthRequest = () => {
+exports.NegotiatePDULengthRequest = () => {
     // Consts
     const TPKTLen = 4;
     const COTPLen = 3;
     const PDUHeaderLen = 10;
     const PUDParLen = 8;
     const DATALen = 0;
-    const PDUType = PDUType.Request;
+    const PDUReqType = PDUType.Request;
     const SEQNumber = 1024; // Sequence Number ??? 65535;
     const TOTALLen = TPKTLen + COTPLen + PDUHeaderLen + PUDParLen + DATALen;
     // Request
@@ -80,7 +80,7 @@ exports.exports.NegotiatePDULengthRequest = () => {
     ret[6] = 0x80; 
     // PDU Header
     ret[7] = 0x32; // protocol identifier (S7)
-    ret[8] = PDUType; // Job Type
+    ret[8] = PDUReqType; // Job Type
     ret[9] = 0x00; // Redundancy identification (1)
     ret[10] = 0x00; // Redundancy identification (2)
     ret[11] = Math.floor(SEQNumber / 0x100);
@@ -93,24 +93,24 @@ exports.exports.NegotiatePDULengthRequest = () => {
     ret[17] = 0xF0;
     ret[18] = 0x00;
     ret[19] = 0x00;
-    ret[20] = 0x03;
+    ret[20] = 0x01; // 1=PG Communication, 2=OP Communication, 3=Step7Basic Communication
     ret[21] = 0x00;
-    ret[22] = 0x03;
-    ret[23] = 0x00; // PDU Length Requested = HI-LO Here > 0x01
-    ret[24] = 0x1E; // PDU Length Requested = HI-LO Here > 0x00
+    ret[22] = 0x01; // 1=PG Communication, 2=OP Communication, 3=Step7Basic Communication 
+    ret[23] = 0x01; // PDU Length Requested = HI-LO Here > 0x01
+    ret[24] = 0xE0; // PDU Length Requested = HI-LO Here > 0xE0
     // Return
     return ret;
 }
 
 // S7 Read Request Header (contains also ISO Header and COTP Header)
-exports.exports.ReadRequest = (parArea, areaNumber, start, len, isBit) => {
+exports.ReadRequest = (parArea, areaNumber, start, len, isBit) => {
     // Consts
     const TPKTLen = 4;
     const COTPLen = 3;
     const PDUHeaderLen = 10; // Request=10, Response=12
     const PUDParLen = 14; // Read parameter
     const DATALen = 0;
-    const PDUType = PDUType.Request;
+    const PDUReqType = PDUType.Request;
     const SEQNumber = 1280; // Sequence Number ??? 0;
     const TOTALLen = TPKTLen + COTPLen + PDUHeaderLen + PUDParLen + DATALen;
     // Request
@@ -126,7 +126,7 @@ exports.exports.ReadRequest = (parArea, areaNumber, start, len, isBit) => {
     ret[6] = 0x80; 
     // PDU Header
     ret[7] = 0x32; // protocol identifier (S7)
-    ret[8] = PDUType; // Job Type
+    ret[8] = PDUReqType; // Job Type
     ret[9] = 0x00; // Redundancy identification (1)
     ret[10] = 0x00; // Redundancy identification (2)
     ret[11] = Math.floor(SEQNumber / 0x100);
@@ -146,17 +146,17 @@ exports.exports.ReadRequest = (parArea, areaNumber, start, len, isBit) => {
     {
         case ParameterArea.S7200AnalogInput:
         case ParameterArea.S7200AnalogOutput:
-            readPars[22] = DataType.Word;
+            ret[22] = DataType.Word;
             start *= 8;
             break;
         case ParameterArea.S7Timer:
         case ParameterArea.S7Counter:
         case ParameterArea.S7200Timer:
         case ParameterArea.S7200Counter:
-            readPars[22] = parArea;
+            ret[22] = parArea;
             break;
         default:
-            readPars[22] = (isBit ? DataType.Bit : DataType.Byte);
+            ret[22] = (isBit ? DataType.Bit : DataType.Byte);
             start *= (isBit) ? 1 : 8;
             break;
     }
@@ -177,7 +177,7 @@ exports.exports.ReadRequest = (parArea, areaNumber, start, len, isBit) => {
 }
 
 // S7 Write Request Header (contains also ISO Header and COTP Header)
-exports.exports.WriteRequest = (parArea, areaNumber, start, isBit, values) => {
+exports.WriteRequest = (parArea, areaNumber, start, isBit, values) => {
     // Normalize values: Only Even bytes of values
     if (values.length % 2 == 1) values.push(0x00);
     // Consts
@@ -186,7 +186,7 @@ exports.exports.WriteRequest = (parArea, areaNumber, start, isBit, values) => {
     const PDUHeaderLen = 10; // Request=10, Response=12
     const PUDParLen = 18; // Write parameter (write header + write parameter)
     const DATALen = values.length;
-    const PDUType = PDUType.Request;
+    const PDUReqType = PDUType.Request;
     const SEQNumber = 1280; // Sequence Number ??? 0;
     // Request
     let ret = [];
@@ -201,7 +201,7 @@ exports.exports.WriteRequest = (parArea, areaNumber, start, isBit, values) => {
     ret[6] = 0x80; 
     // PDU Header
     ret[7] = 0x32; // protocol identifier (S7)
-    ret[8] = PDUType; // Job Type
+    ret[8] = PDUReqType; // Job Type
     ret[9] = 0x00; // Redundancy identification (1)
     ret[10] = 0x00; // Redundancy identification (2)
     ret[11] = Math.floor(SEQNumber / 0x100);
@@ -221,23 +221,23 @@ exports.exports.WriteRequest = (parArea, areaNumber, start, isBit, values) => {
     {
         case ParameterArea.S7200AnalogInput:
         case ParameterArea.S7200AnalogOutput:
-            writePars[22] = DataType.Word;
-            writePars[23] = Math.floor(((DATALen + 1) / 2) / 0x100);
-            writePars[24] = (((DATALen + 1) / 2) % 0x100);
+            ret[22] = DataType.Word;
+            ret[23] = Math.floor(((DATALen + 1) / 2) / 0x100);
+            ret[24] = (((DATALen + 1) / 2) % 0x100);
             start *= 8;
             break;
         case ParameterArea.S7Timer:
         case ParameterArea.S7Counter:
         case ParameterArea.S7200Timer:
         case ParameterArea.S7200Counter:
-            writePars[22] = parArea;
-            writePars[23] = Math.floor(((DATALen + 1) / 2) / 0x100);
-            writePars[24] = (((DATALen + 1) / 2) % 0x100);
+            ret[22] = parArea;
+            ret[23] = Math.floor(((DATALen + 1) / 2) / 0x100);
+            ret[24] = (((DATALen + 1) / 2) % 0x100);
             break;
         default:
-            writePars[22] = (isBit ? DataType.Bit : DataType.Byte);
-            writePars[23] = Math.floor(DATALen / 0x100);
-            writePars[24] = (DATALen % 0x100);
+            ret[22] = (isBit ? DataType.Bit : DataType.Byte);
+            ret[23] = Math.floor(DATALen / 0x100);
+            ret[24] = (DATALen % 0x100);
             start *= (isBit) ? 1 : 8;
             break;
     }
@@ -256,7 +256,7 @@ exports.exports.WriteRequest = (parArea, areaNumber, start, isBit, values) => {
     ret[33] = Math.floor(DATALen * 8 / 0x100);
     ret[34] = (DATALen * 8 % 0x100);
     // Add Values    
-    ret.push(values);
+    ret = ret.concat(values);
     // Return
     return ret;
 }

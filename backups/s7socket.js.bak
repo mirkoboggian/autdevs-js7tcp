@@ -1,7 +1,7 @@
 const s7comm = require("./s7comm");
 const net = require('net');
 const events = require('events');
-var alock = require('async-lock');
+var rwlock = require('readwrite-lock');
 
 module.exports = class S7Socket extends events{
 
@@ -14,7 +14,7 @@ module.exports = class S7Socket extends events{
         this.autoreconnect = autoreconnect;
         this.timeout = timeout;
         this.rwTimeout = rwTimeout;
-        this.lock = new alock({timeout: this.rwTimeout});
+        this.lock = new rwlock({timeout: this.rwTimeout});
     }
     
     connect() {
@@ -30,7 +30,7 @@ module.exports = class S7Socket extends events{
             let e = new Error("Invalid socket status.");
             this._onError(e);
         } else {
-            this.lock.acquire('socket', async() => {
+            this.lock.acquireRead('socket', async() => {
                 return await this._read(parArea, areaNumber, start, len, isBit);
             }).then((result) => {
                 this._onRead(result);
@@ -45,7 +45,7 @@ module.exports = class S7Socket extends events{
             let e = new Error("Invalid socket status.");
             this._onError(e);
         } else {
-            this.lock.acquire('socket', async() => {
+            this.lock.acquireWrite('socket', async() => {
                 return await this._write(parArea, areaNumber, start, isBit, values);
             }).then((result) => {
                 this._onWrite(result);
