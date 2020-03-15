@@ -25,13 +25,13 @@ module.exports = class S7Socket extends events{
         return (this._socket && this._socket.readyState == "open");
     }
 
-    read(parArea, areaNumber, start, len, isBit) {    
+    read(tag) {    
         if (!this.connected()) {
             let e = new Error("Invalid socket status.");
             this._onError(e);
         } else {
             this.lock.acquire('socket', async() => {
-                return await this._read(parArea, areaNumber, start, len, isBit);
+                return await this._read(tag.parArea, tag.areaNumber, tag.start, tag.len, tag.isBit);
             }).then((result) => {
                 this._onRead(result);
             }).catch((err) => {
@@ -40,19 +40,49 @@ module.exports = class S7Socket extends events{
         }    
     }
 
-    write(parArea, areaNumber, start, isBit, values) {
+    write(tag, values) {
         if (!this.connected()) {
             let e = new Error("Invalid socket status.");
             this._onError(e);
         } else {
             this.lock.acquire('socket', async() => {
-                return await this._write(parArea, areaNumber, start, isBit, values);
+                return await this._write(tag.parArea, tag.areaNumber, tag.start, tag.isBit, values);
             }).then((result) => {
                 this._onWrite(result);
             }).catch((err) => {                
                 this._onError(err); 
             });
         }        
+    }
+
+    multiRead(tags) {
+        if (!this.connected()) {
+            let e = new Error("Invalid socket status.");
+            this._onError(e);
+        } else {
+            this.lock.acquire('socket', async() => {
+                return await this._multiRead(tags);
+            }).then((result) => {
+                this._onRead(result);
+            }).catch((err) => {
+                this._onError(err); 
+            });
+        }   
+    }
+
+    multiWrite(tags, values) {
+        if (!this.connected()) {
+            let e = new Error("Invalid socket status.");
+            this._onError(e);
+        } else {
+            this.lock.acquire('socket', async() => {
+                return await this._multiWrite(tags, values);
+            }).then((result) => {
+                this._onRead(result);
+            }).catch((err) => {
+                this._onError(err); 
+            });
+        }   
     }
 
     _connect() {
@@ -110,8 +140,8 @@ module.exports = class S7Socket extends events{
     _read(parArea, areaNumber, start, len, isBit) {
         let self = this;
         return new Promise((resolve, reject) => {
-            if (len > s7comm.MAX_READ_BYTES) {
-                let e = new Error("'len' is greater than Read Maximum (" + s7comm.MAX_READ_BYTES + ")");
+            if (len > s7comm.MAXREADBYTES) {
+                let e = new Error("'len' is greater than Read Maximum (" + s7comm.MAXREADBYTES + ")");
                 reject(e);
                 return;
             }
@@ -144,8 +174,8 @@ module.exports = class S7Socket extends events{
         let self = this;
         return new Promise((resolve, reject) => {
             let len = values.length;
-            if (len > s7comm.MAX_WRITE_BYTES) {
-                let e = new Error("'len' is greater than Write Maximum (" + s7comm.MAX_WRITE_BYTES + ")");
+            if (len > s7comm.MAXWRITEBYTES) {
+                let e = new Error("'len' is greater than Write Maximum (" + s7comm.MAXWRITEBYTES + ")");
                 reject(e);
                 return;
             }            
@@ -171,6 +201,24 @@ module.exports = class S7Socket extends events{
                 }); 
             });
         });        
+    }
+
+    _multiRead(tags)
+    {
+        let self = this;
+        return new Promise((resolve, reject) => {
+            resolve(null);
+            return;
+        }); 
+    }
+
+    _multiWrite(tags, values)
+    {
+        let self = this;
+        return new Promise((resolve, reject) => {
+            resolve(null);
+            return;
+        }); 
     }
 
     _onRead(data) {

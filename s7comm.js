@@ -20,6 +20,24 @@ exports.ParameterArea = ParameterArea;
 exports.PDUType = PDUType;
 exports.DataType = DataType;
 
+// Local Consts
+const MAXPDUSIZE = 1024;
+const MAXREADBYTES = 942;
+const MAXWRITEBYTES = 932;
+const MAXITEMSLIST = 20;
+if (Object.freeze) {
+    Object.freeze(MAXPDUSIZE);
+    Object.freeze(MAXREADBYTES);
+    Object.freeze(MAXWRITEBYTES);
+    Object.freeze(MAXITEMSLIST);
+}
+
+// Consts exports
+exports.MAXPDUSIZE = MAXPDUSIZE;
+exports.MAXREADBYTES = MAXREADBYTES;
+exports.MAXWRITEBYTES = MAXWRITEBYTES;
+exports.MAXITEMSLIST = MAXITEMSLIST;
+
  // ISO Connection Request telegram (contains also ISO Header and COTP Header)
 exports.RegisterSessionRequest = (rack, slot) => {
     // Consts
@@ -96,8 +114,11 @@ exports.NegotiatePDULengthRequest = () => {
     ret[20] = 0x01; // 1=PG Communication, 2=OP Communication, 3=Step7Basic Communication
     ret[21] = 0x00;
     ret[22] = 0x01; // 1=PG Communication, 2=OP Communication, 3=Step7Basic Communication 
-    ret[23] = 0x01; // PDU Length Requested = HI-LO Here > 0x01
-    ret[24] = 0xE0; // PDU Length Requested = HI-LO Here > 0xE0
+    // MAX PDU Length 
+    // > 942 bytes on read
+    // > XXX bytes on write
+    ret[23] = Math.floor(MAXPDUSIZE / 0x100); // PDU Length Requested = HI-LO Here > 0x04
+    ret[24] = (MAXPDUSIZE % 0x100); // PDU Length Requested = HI-LO Here > 0x00
     // Return
     return ret;
 }
@@ -257,6 +278,106 @@ exports.WriteRequest = (parArea, areaNumber, start, isBit, values) => {
     ret[34] = (DATALen * 8 % 0x100);
     // Add Values    
     ret = ret.concat(values);
+    // Return
+    return ret;
+}
+
+// S7 Variable MultiRead
+exports.MultiReadRequest = (itemsList) => {
+    // Request
+    let ret = [];
+    // Assert items count (max 20)
+    let itemsCount = itemsList.length;
+    if (itemsCount > this.MAXITEMSLIST) itemsCount = this.MAXITEMSLIST;
+    // Header
+    ret = ret.concat(MultiReadHeaderRequest(itemsCount));
+    // Items Add
+    for(let i = 0; i < itemsCount; i++) {
+        let item = itemsList[i];
+        let itemRequest = MultiReadItemRequest(item.parArea, item.areaNumber, item.start, item.len, item.isBit);
+        ret = ret.concat(itemRequest);
+    }
+    return ret;
+}
+
+// S7 Variable MultiRead Header
+MultiReadHeaderRequest = (itemsCount) => {
+    // Consts
+    const TPKTLen = 4;
+    const COTPLen = 3;
+    const PDUHeaderLen = 10; // Request=10, Response=12
+    const ITEMLen = 12;
+    const PUDParLen = itemsCount * ITEMLen + 2; // Read parameter
+    const DATALen = 0;
+    const PDUReqType = PDUType.Request;
+    const SEQNumber = 1280; // Sequence Number ??? 0;
+    const TOTALLen = TPKTLen + COTPLen + PDUHeaderLen + PUDParLen + DATALen;
+    // Request
+    let ret = [];
+    // TPKT (RFC1006 Header)
+    ret[0] = 0x03; // RFC 1006 ID (3) 
+    ret[1] = 0x00; // Reserved, always 0
+    ret[2] = Math.floor(TOTALLen / 0x100); // High part of packet lenght (entire frame, payload and TPDU included)
+    ret[3] = (TOTALLen % 0x100); // Low part of packet lenght (entire frame, payload and TPDU included)
+    // COTP (ISO 8073 Header)
+    ret[4] = 0x02;
+    ret[5] = 0xF0; // Connect on S7comm layer (s7comm.param.func = 0xf0, Setup communication)
+    ret[6] = 0x80; 
+    // PDU Header
+    ret[7] = 0x32; // protocol identifier (S7)
+    ret[8] = PDUReqType; // Job Type
+    ret[9] = 0x00; // Redundancy identification (1)
+    ret[10] = 0x00; // Redundancy identification (2)
+    ret[11] = Math.floor(SEQNumber / 0x100);
+    ret[12] = (SEQNumber % 0x100);
+    ret[13] = Math.floor(PUDParLen / 0x100);
+    ret[14] = (PUDParLen % 0x100);
+    ret[15] = Math.floor(DATALen / 0x100);
+    ret[16] = (DATALen % 0x100);
+    // Read Parameters
+    ret[17] = FunctionCode.Read; // Function
+    ret[18] = itemsCount; // Items count (idx 18)
+    // Return
+    return ret;
+}
+// S7 Variable MultiRead Item
+MultiReadItemRequest = (parArea, areaNumber, start, len, isBit) => {
+    // Request
+    let ret = [];
+    ret[0] = 0x12; // Var spec.
+    ret[1] = 0x0A; // Length of remaining bytes
+    ret[2] = 0x10; // Syntax ID 
+    // Transport Size
+    switch (parArea)
+    {
+        case ParameterArea.S7200AnalogInput:
+        case ParameterArea.S7200AnalogOutput:
+            ret[3] = DataType.Word;
+            start *= 8;
+            break;
+        case ParameterArea.S7Timer:
+        case ParameterArea.S7Counter:
+        case ParameterArea.S7200Timer:
+        case ParameterArea.S7200Counter:
+            ret[3] = parArea;
+            break;
+        default:
+            ret[3] = (isBit ? DataType.Bit : DataType.Byte);
+            start *= (isBit) ? 1 : 8;
+            break;
+    }
+    // Num Elements > length in bytes
+    ret[4] = Math.floor(len / 0x100);
+    ret[5] = (len % 0x100);
+    // DB Number (if any, else 0) 
+    ret[6] = Math.floor(areaNumber / 0x100);
+    ret[7] = (areaNumber % 0x100);  
+    // Area Code
+    ret[8] = parArea;  
+    // Start address in bits
+    ret[9] = Math.floor(start / 0x10000);
+    ret[10] = Math.floor(start / 0x100);
+    ret[11] = (start % 0x100);
     // Return
     return ret;
 }

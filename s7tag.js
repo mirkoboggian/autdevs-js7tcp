@@ -3,13 +3,13 @@ const events = require('events');
 
 module.exports = class S7Tag extends events{
 
-    constructor(area, db, start, elements, len) {  
+    constructor(parArea, areaNumber, start, len, isBit) {  
         super();
-        this.area = area;
-        this.db = db;
+        this.parArea = parArea;
+        this.areaNumber = areaNumber;
         this.start = start;
-        this.elements = elements;
         this.len = len;
+        this.isBit = isBit;
     }
 
 }
