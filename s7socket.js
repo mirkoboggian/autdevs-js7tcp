@@ -5,39 +5,54 @@ var rwlock = require('readwrite-lock');
 
 class S7Socket extends events{
 
-    constructor(ip = "127.0.0.1", port = 102, rack = 0, slot = 2, autoreconnect = 10000, timeout = 60000) {  
+    constructor(ip = "127.0.0.1", port = 102, rack = 0, slot = 2, autoreconnect = 10000, timeout = 60000, rwTimeout = 5000) {  
         super();        
-        this.lock = new rwlock();
         this.ip = ip;
         this.port = port;
         this.rack = rack;
         this.slot = slot;        
         this.autoreconnect = autoreconnect;
         this.timeout = timeout;
+        this.rwTimeout = rwTimeout;
+        this.lock = new rwlock({timeout: this.rwTimeout});
     }
     
     connect() {
         this._connect();
     }
 
-    read(parArea, areaNumber, start, len, isBit) {        
-        this.lock.acquireRead('socket', async() => {
-            return await this._read(parArea, areaNumber, start, len, isBit);
-        }).then((result) => {
+    connected() {
+        return (this._socket && this._socket.readyState == "open");
+    }
 
-        }).catch((err) => {
-
-        });
+    read(parArea, areaNumber, start, len, isBit) {    
+        if (!this.connected()) {
+            let e = new Error("Invalid socket status.");
+            this._onError(e);
+        } else {
+            this.lock.acquireRead('socket', async() => {
+                return await this._read(parArea, areaNumber, start, len, isBit);
+            }).then((result) => {
+                // read completed
+            }).catch((err) => {
+                this._onError(err); 
+            });
+        }    
     }
 
     write(parArea, areaNumber, start, isBit, values) {
-        this.lock.acquireWrite('socket', async() => {
-            return await this._write(parArea, areaNumber, start, isBit, values);
-        }).then((result) => {
-
-        }).catch((err) => {
-
-        });
+        if (!this.connected()) {
+            let e = new Error("Invalid socket status.");
+            this._onError(e);
+        } else {
+            this.lock.acquireWrite('socket', async() => {
+                return await this._write(parArea, areaNumber, start, isBit, values);
+            }).then((result) => {
+                // write completed
+            }).catch((err) => {
+                this._onError(err); 
+            });
+        }        
     }
 
     _connect() {
@@ -86,7 +101,7 @@ class S7Socket extends events{
                 });
             });  
         });                
-    }
+    }    
 
     _read(parArea, areaNumber, start, len, isBit) {
         let self = this;
@@ -171,16 +186,18 @@ class S7Socket extends events{
 var s7socket = new S7Socket("192.168.1.91", 102, 0, 1, 5000, 30000);
 
 s7socket.on('connected', () => {
-    console.log("CONESSOOOOO!");
-    setInterval(() => {
-          let data = s7socket.read(s7comm.ParameterArea.DB, 1, 0, 10, false);
-    }, 500);
+    console.log("CONNECTED: ", s7socket.connected());
+    // Polling write
     setInterval(() => {
         let now = new Date(Date.now());
         let values = [1+now.getSeconds(), 2+now.getSeconds(), 3+now.getSeconds(), 4+now.getSeconds(), 5+now.getSeconds(),
              6+now.getSeconds(), 7+now.getSeconds(), 8+now.getSeconds(), 9+now.getSeconds(), 10+now.getSeconds()];
         let data = s7socket.write(s7comm.ParameterArea.DB, 1, 0, false, values);
-    }, 500);
+    }, 50);
+    // Polling read
+    setInterval(() => {
+        let data = s7socket.read(s7comm.ParameterArea.DB, 1, 0, 10, false);
+  }, 50);
 });
 
 s7socket.on('error', (error) => {
