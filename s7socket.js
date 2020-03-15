@@ -205,6 +205,8 @@ module.exports = class S7Socket extends events{
 
     _multiRead(tags)
     {
+        
+
         let self = this;
         return new Promise((resolve, reject) => {
             resolve(null);

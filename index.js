@@ -278,3 +278,10 @@ s7socket.on('write', (data) => {
 });
 
 s7socket.connect();
+
+
+tag = S7Tag.fromPath("DB1.DBB0[5]")
+tag = S7Tag.fromPath("DB1.DBB0")
+tag = S7Tag.fromPath("MD11[66]")
+tag = S7Tag.fromPath("MD11.%5")
+tag = S7Tag.fromPath("MD11.%5[12]")
