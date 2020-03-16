@@ -12,19 +12,27 @@ var DataType = {
     DWord: 0x06,
     DInt: 0x07,
     Real: 0x08,
+    UByte: 0x09, // NOT DEFINE IN PROTOCOL
+    UInt: 0x0A, // NOT DEFINE IN PROTOCOL
+    UDInt: 0x0B, // NOT DEFINE IN PROTOCOL
+    String: 0x0C, // NOT DEFINE IN PROTOCOL
     Counter: 0x1C,
     Timer: 0x1D,
-    BitSize: {
-      0x01: {name: "Bit", value: 1},
-      0x02: {name: "Byte", value: 8},
-      0x03: {name: "Char", value: 8},
-      0x04: {name: "Word", value: 16},
-      0x05: {name: "Int", value: 16},
-      0x06: {name: "DWord", value: 32},
-      0x07: {name: "DInt", value: 32},
-      0x08: {name: "Real", value: 32},
-      0x1C: {name: "Counter", value: 16},
-      0x1D: {name: "Timer", value: 16},
+    Info: {
+      "%": {index: 0x01, name: "Bit", size: 1},
+      "B": {index: 0x02, name: "Byte", size: 8},
+      "C": {index: 0x03, name: "Char", size: 8},
+      "W": {index: 0x04, name: "Word", size: 16},
+      "I": {index: 0x05, name: "Int", size: 16},
+      "DW": {index: 0x06, name: "DWord", size: 32},
+      "DI": {index: 0x07, name: "DInt", size: 32},
+      "R": {index: 0x08, name: "Real", size: 32},
+      "UB": {index: 0x09, name: "UByte", size: 8}, 
+      "UI": {index: 0x0A, name: "UInt", size: 16},
+      "UD": {index: 0x0B, name: "UDInt", size: 32}, 
+      "S": {index: 0x0C, name: "String", size: 8}, 
+      "CN": {index: 0x1C, name: "Counter", size: 16},
+      "TM": {index: 0x1D, name: "Timer", size: 16},
     }
 };
 

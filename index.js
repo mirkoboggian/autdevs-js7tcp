@@ -279,5 +279,8 @@ s7socket.on('write', (data) => {
 
 // s7socket.connect();
 
-let tag = S7Tag.fromPath("Db15.Dbb1.%7")
+let tag = S7Tag.fromPath("DB123.DBDI10[5]")
 console.log(tag.getPath());
+console.log(tag.getDataType());
+console.log(tag.getBitsSize());
+console.log(tag.getBytesSize());
