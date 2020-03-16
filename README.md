@@ -15,4 +15,5 @@
 * Letture/Scritture multiple: verifica che la lunghezza della richiesta sia compatibile con la lunghezza massima del PDU (per farlo server la dichiarazione del TIPO nel Tag)
 * Tag: conversione in base al tipo (da byte[] a Tipo e viceversa) 
 * Tag: costruttore con l'indirizzo assoluto
+* TagPath: L'espressione regolare non è GARANTITA. Ci sono troppi sottocasi da valutare.
 
