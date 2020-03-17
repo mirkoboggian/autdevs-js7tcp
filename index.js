@@ -246,10 +246,11 @@ s7socket.on('connect', () => {
         var db1dbw0 = S7Tag.fromPath("DB1.DBW0[10]");
         var db1dbw10 = S7Tag.fromPath("DB1.DBW10");
         var db1dbw14 = S7Tag.fromPath("DB1.DBW14");
+        var db1dbb9 = S7Tag.fromPath("DB1.DBb100[11]");
         var db1dbw8 = S7Tag.fromPath("DB1.DBW8");
-        var db1dbb8 = S7Tag.fromPath("DB1.DBb8");
-        var db1dbb9 = S7Tag.fromPath("DB1.DBb9");
-        var db1dbw26 = S7Tag.fromPath("DB1.DBW26");
+        var db1dbb8 = S7Tag.fromPath("DB1.DBb1008");
+        var db1dbb9 = S7Tag.fromPath("DB1.DBb229");
+        var db1dbw26 = S7Tag.fromPath("DB1.DBW126");        
         var items = [db1dbw0, db1dbw10, db1dbw14, db1dbw8, db1dbw26, db1dbb8, db1dbb9];
         var mrRequest = s7socket.multiRead(items);
     }, 50);
