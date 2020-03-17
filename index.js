@@ -13,8 +13,7 @@ s7socket.on('connect', () => {
     // s7socket.read(Db1DbR0);
 
     let Db1DbS1 = S7Tag.fromPath("DB1.DBS3604[20]");
-    let Db1DbS1_val = Db1DbS1.toBytes("DIO CANE!!!!!");
-    s7socket.read(Db1DbS1);
+    let Db1DbS1_val = Db1DbS1.toBytes("SALUTAME assorrata!");
     s7socket.write(Db1DbS1, Db1DbS1_val);
     s7socket.read(Db1DbS1);
 
