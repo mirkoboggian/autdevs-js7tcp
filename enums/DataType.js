@@ -19,7 +19,7 @@ var DataType = {
     Timer: 0x1D,
     String: 0xFF, // NOT DEFINE IN PROTOCOL
     Info: {
-      "%": {index: 0x01, name: "Bit", size: 1},
+      "%": {index: 0x01, name: "Bit", size: 8}, // S7 sends 1 byte per bit
       "B": {index: 0x02, name: "Byte", size: 8},
       "UB": {index: 0x02, name: "UByte", size: 8},
       "C": {index: 0x03, name: "Char", size: 8},
