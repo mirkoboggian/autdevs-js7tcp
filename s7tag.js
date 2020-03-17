@@ -106,16 +106,33 @@ module.exports = class S7Tag extends events {
     }
 
     fromBytes(bytes) {
-        // TODO: Check for array
-        let func = s7comm.DataType.Info[this.typeCode].fromBytes;
+        let func = s7comm.DataType.Info[this.typeCode].fromBytes;        
         if(this.typeCode=="S") return func(bytes);
-        return func(bytes);
+        if (this.array) {
+            let ret = [];
+            let len = this.bytesSize / this.array;
+            for(let i=0;i<this.array;i++){
+                let subBytes = bytes.slice((len*i), (len*i)+len)
+                let item = func(subBytes);
+                ret.push(item);
+            }
+            return ret;
+        }
+        return func(ret);
     }
 
     toBytes(value) {
-        // TODO: Check for array
         let func = s7comm.DataType.Info[this.typeCode].toBytes;
-        if(this.typeCode=="S") return func(value, this.array);
-        return func(value);
+        if(this.typeCode=="S") return func(value, this.array);                
+        if (this.array) {
+            let ret = [];
+            for(let i=0;i<this.array;i++){
+                let buffer = func(value[i]);
+                let itemArray = Array.prototype.slice.call(buffer, 0);
+                ret = ret.concat(itemArray);                
+            }
+            return ret;
+        }
+        return func(ret);        
     }
 }

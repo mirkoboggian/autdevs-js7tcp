@@ -12,10 +12,15 @@ s7socket.on('connect', () => {
     // s7socket.write(Db1DbR0, Db1DbR0_val);
     // s7socket.read(Db1DbR0);
 
-    let Db1DbS1 = S7Tag.fromPath("DB1.DBS3604[20]");
-    let Db1DbS1_val = Db1DbS1.toBytes("SALUTAME assorrata!");
-    s7socket.write(Db1DbS1, Db1DbS1_val);
-    s7socket.read(Db1DbS1);
+    // let Db1DbS1 = S7Tag.fromPath("DB1.DBS3604[20]");
+    // let Db1DbS1_val = Db1DbS1.toBytes("SALUTAME assorrata!");
+    // s7socket.write(Db1DbS1, Db1DbS1_val);
+    // s7socket.read(Db1DbS1);
+
+    let Db1DbI3628 = S7Tag.fromPath("DB1.DBI3628[10]");
+    let Db1DbI3628_val = Db1DbI3628.toBytes([1,2,3,4,5,6,7,8,9,10]);
+    s7socket.write(Db1DbI3628, Db1DbI3628_val);
+    s7socket.read(Db1DbI3628);
 
 });
 
