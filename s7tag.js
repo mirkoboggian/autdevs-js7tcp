@@ -5,12 +5,12 @@ module.exports = class S7Tag extends events {
 
     constructor(db, areaCode, typeCode, offset, bit, array, value = null) {
         super(); 
-        this.db = parseInt(db);
+        this.db = db ? parseInt(db) : null;
         this.areaCode = areaCode ? areaCode.toUpperCase() : areaCode;
         this.typeCode = typeCode ? typeCode.toUpperCase() : typeCode;
-        this.offset = parseInt(offset);
-        this.bit = parseInt(bit);
-        this.array = parseInt(array);
+        this.offset = offset ? parseInt(offset) : null;
+        this.bit = bit ? parseInt(bit) : null;
+        this.array = array ? parseInt(array) : null;
 
         // area, type and offset must setted!
         if (!this.areaCode || !this.typeCode || !this.offset) {
@@ -91,7 +91,7 @@ module.exports = class S7Tag extends events {
     }
 
     getBitsSize() {
-        let bitsSize = s7comm.DataType.Info[this.typeCode].size(this.array);
+        let bitsSize = s7comm.DataType.Info[this.typeCode].size(this.array ? this.array : 1);
         return bitsSize;
     }
 

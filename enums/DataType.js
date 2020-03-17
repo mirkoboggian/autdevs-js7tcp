@@ -1,10 +1,10 @@
 // helpers functions
 
 // Size
-const get8BitSize = (len=1) => { return 8 * len; }
-const get16BitSize = (len=1) => { return 16 * len; }
-const get32BitSize = (len=1) => { return 32 * len; }
-const getStringSize = (len=1) => { return 8 * (len + 2);}
+const get8BitSize = (len) => { return 8 * len; }
+const get16BitSize = (len) => { return 16 * len; }
+const get32BitSize = (len) => { return 32 * len; }
+const getStringSize = (len) => { return 8 * (len + 2);}
 
 //#region Null
 const RetNull = () => {return null}
