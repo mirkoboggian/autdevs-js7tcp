@@ -31,9 +31,9 @@ module.exports = class S7Socket extends events{
             this._onError(e);
         } else { 
             this.lock.acquire('socket', async() => {
-                return await this._multiRead([tag]);
+                return await this._read(tag);
             }).then((result) => {
-                this._onRead(result[0]);
+                this._onRead(result);
             }).catch((err) => {
                 this._onError(err); 
             });
@@ -46,9 +46,9 @@ module.exports = class S7Socket extends events{
             this._onError(e);
         } else {
             this.lock.acquire('socket', async() => {
-                return await this._multiWrite([tag], [value]);
+                return await this._write(tag, value);
             }).then((result) => {
-                this._onWrite(result[0]);
+                this._onWrite(result);
             }).catch((err) => {                
                 this._onError(err); 
             });
@@ -78,7 +78,7 @@ module.exports = class S7Socket extends events{
             this.lock.acquire('socket', async() => {
                 return await this._multiWrite(tags, values);
             }).then((result) => {
-                this._onWrite(result);
+                this._onRead(result);
             }).catch((err) => {
                 this._onError(err); 
             });
@@ -137,6 +137,79 @@ module.exports = class S7Socket extends events{
         });                
     }    
 
+    _read(tag) {
+        let self = this;
+        return new Promise((resolve, reject) => {
+            // assert s7comm.MAXREADBYTES
+            if (tag.bytesSize > s7comm.MAXREADBYTES) {
+                let e = new Error("Tag's bytesSize is greater than Read Maximum (" + s7comm.MAXREADBYTES + ")");
+                reject(e);
+                return;
+            }
+            let request = Uint8Array.from(s7comm.ReadRequest([tag]));
+            let result = self._socket.write(request, (e) => {
+                if (e) { 
+                    reject(e);
+                    return;
+                };
+                self._socket.once('data', buffer => {
+                    if (buffer.length != 25+tag.bytesSize) {
+                        let e = new Error("Error on data bytes read response!");
+                        reject(e);
+                        return;  
+                    }                                              
+                    if (buffer[21] != 0xFF) {
+                        let e = new Error("Error reading data: " + buffer[response.prototype.length-1]);
+                        reject(e);
+                        return;
+                    }                    
+                    let data = Uint8Array.from(buffer.subarray(25, 25+tag.bytesSize));                                    
+                    resolve(data);
+                    return;
+                }); 
+            });
+        });        
+    }
+
+    _write(tag, value) {
+        let self = this;
+        return new Promise((resolve, reject) => {
+            // assert bytesLength
+            if (tag.bytesSize != value.length) {
+                let e = new Error("Tag's size and value size are different. Tag = " + tag.bytesSize + ", Value = " + value.length);
+                reject(e);
+                return;
+            }   
+            // assert s7comm.MAXWRITEBYTES
+            if (tag.bytesSize > s7comm.MAXWRITEBYTES) {
+                let e = new Error("Tag's bytesSize is greater than Write Maximum (" + s7comm.MAXWRITEBYTES + ")");
+                reject(e);
+                return;
+            }            
+            let request = Uint8Array.from(s7comm.WriteRequest([tag], [value]));
+            let result = self._socket.write(request, (e) => {
+                if (e) {
+                    reject(e);
+                    return;
+                };
+                self._socket.once('data', buffer => {                    
+                    if (buffer.length != 22) {
+                        let e = new Error("Error on data write response!");
+                        reject(e);
+                        return;
+                    }                    
+                    if (buffer[21] != 0xFF) {
+                        let e = new Error("Error writing data: " + buffer[buffer.prototype.length-1]);
+                        reject(e);
+                        return;
+                    }                                        
+                    resolve(value);
+                    return;
+                }); 
+            });
+        });        
+    }
+
     _multiRead(tags)
     {    
         let self = this;
@@ -179,15 +252,14 @@ module.exports = class S7Socket extends events{
                         reject(e);
                         return;  
                     }
-                    let results = [];
+                    let values = [];
                     let offset = 21;
                     tags.forEach((tag) => {
                         let tagResponse = buffer.slice(offset, offset + tag.bytesSize + 4);
                         // assert tag result
                         if (tagResponse[0] != 0xFF) {
-                            // Error on read.
-                            // add a null in tag value response
-                            results.push({Tag: tag, Value: null});
+                            let e = new Error("Error reading tag " + tag.path);
+                            reject(e);
                             return;
                         }
                         // ATT: in tagResponse[1] there is the DataType to know how to manage the SIZE.
@@ -196,75 +268,29 @@ module.exports = class S7Socket extends events{
                         let itemBytesLength = itemBitsLength / 8;
                         // assert tag result bytes length
                         if (itemBytesLength != tag.bytesSize) {
-                            // Error reading tag bytes size
-                            // add a null in tag value response
-                            results.push({Tag: tag, Value: null});
+                            let e = new Error("Error reading tag bytes size " + tag.path);
+                            reject(e);
                             return;
                         }
                         // takes value
                         let tagValue = tagResponse.slice(4, 4 + tag.bytesSize);
-                        results.push({Tag: tag, Value: Uint8Array.from(tagValue)});
+                        values.push(tagValue);
                         offset += tag.bytesSize + 4;
                     });            
-                    resolve(results);
+                    resolve(values);
                     return;
                 });                
             });            
         }); 
     }
 
+    /* TODO */
     _multiWrite(tags, values)
     {
         let self = this;
         return new Promise((resolve, reject) => {
-            // assert tags count and values count
-            if (tags.length != values.length) {
-                let e = new Error("Tags count (" + tags.length + ") different from values count (" + values.length + ")");
-                reject(e);
-                return;
-            }
-            // assert s7comm.MAXITEMSLIST
-            if (tags.length > s7comm.MAXITEMSLIST) {
-                let e = new Error("Tags count is greater than Maximum (" + s7comm.MAXITEMSLIST + ")");
-                reject(e);
-                return;
-            }
-            // assert s7comm.MAXWRITEBYTES
-            let totalLength = tags.reduce((total, item) => total + (item['bytesSize'] || 0), 0);
-            if (totalLength > s7comm.MAXWRITEBYTES) {
-                let e = new Error("Tags total length is greater than Maximum (" + s7comm.MAXWRITEBYTES + ")");
-                reject(e);
-                return;
-            }
-            let request = Uint8Array.from(s7comm.WriteRequest(tags, values));
-            let result = self._socket.write(request, (e) => {
-                if (e) { 
-                    reject(e);
-                    return;
-                };                
-                self._socket.once('data', buffer => {
-                    // assert Operation result
-                    if (buffer[17] != 0 || buffer[18] != 0) {
-                        let e = new Error("Write response return an error: " + buffer[17] + "/" + buffer[18]);
-                        reject(e);
-                        return;  
-                    } 
-                    // assert Items Count
-                    if (buffer[20] != tags.length || buffer[20] > s7comm.MAXITEMSLIST) {
-                        let e = new Error("Write response return invalid items count");
-                        reject(e);
-                        return;  
-                    } 
-                    let results = [];
-                    let offset = 21;
-                    tags.forEach((tag) => {
-                        results.push({Tag: tag, Value: buffer[offset]});
-                        offset += 1;
-                    });
-                    resolve(results);
-                    return;
-                });
-            });
+            resolve(null);
+            return;
         }); 
     }
 
@@ -272,12 +298,12 @@ module.exports = class S7Socket extends events{
         this.emit('connect');
     }
 
-    _onRead(results) {
-        this.emit('read', results);
+    _onRead(data) {
+        this.emit('read', data);
     }
 
-    _onWrite(results) {
-        this.emit('write', results);
+    _onWrite(data) {
+        this.emit('write', data);
     }
 
     _onError(error) {

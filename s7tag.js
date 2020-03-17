@@ -3,11 +3,11 @@ const events = require('events');
 
 module.exports = class S7Tag extends events {
 
-    constructor(db, area, type, offset, bit, array) {
+    constructor(db, areaCode, typeCode, offset, bit, array) {
         super(); 
         this.db = db;
-        this.areaCode = area ? area.toUpperCase() : area;
-        this.typeCode = type ? type.toUpperCase() : type;
+        this.areaCode = areaCode ? areaCode.toUpperCase() : areaCode;
+        this.typeCode = typeCode ? typeCode.toUpperCase() : typeCode;
         this.offset = offset;
         this.bit = bit;
         this.array = array;
