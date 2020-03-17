@@ -118,7 +118,7 @@ module.exports = class S7Tag extends events {
             }
             return ret;
         }
-        return func(ret);
+        return func(bytes);
     }
 
     toBytes(value) {
@@ -133,6 +133,6 @@ module.exports = class S7Tag extends events {
             }
             return ret;
         }
-        return func(ret);        
+        return func(value);        
     }
 }
