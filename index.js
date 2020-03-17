@@ -247,8 +247,10 @@ s7socket.on('connect', () => {
         var db1dbw10 = S7Tag.fromPath("DB1.DBW10");
         var db1dbw14 = S7Tag.fromPath("DB1.DBW14");
         var db1dbw8 = S7Tag.fromPath("DB1.DBW8");
+        var db1dbb8 = S7Tag.fromPath("DB1.DBb8");
+        var db1dbb9 = S7Tag.fromPath("DB1.DBb9");
         var db1dbw26 = S7Tag.fromPath("DB1.DBW26");
-        var items = [db1dbw0, db1dbw10, db1dbw14, db1dbw8, db1dbw26];
+        var items = [db1dbw0, db1dbw10, db1dbw14, db1dbw8, db1dbw26, db1dbb8, db1dbb9];
         var mrRequest = s7socket.multiRead(items);
     }, 50);
 
@@ -269,19 +271,15 @@ s7socket.on('write', (result) => {
 });
 
 s7socket.on('multiRead', (result) => {
-    console.info("READ: ", result[0].Tag.path, result[0].Value);
-    console.info("READ: ", result[1].Tag.path, result[1].Value);
-    console.info("READ: ", result[2].Tag.path, result[2].Value);
-    console.info("READ: ", result[3].Tag.path, result[3].Value);
-    console.info("READ: ", result[4].Tag.path, result[4].Value);
+    result.forEach((r) => {
+        console.info("READ: ", r.Tag.path, r.Value);
+    });
 });
 
 s7socket.on('multiWrite', (result) => {
-    console.warn("WRITE: ", result[0].Tag.path + ": " + (result[0].Value == 255));
-    console.warn("WRITE: ", result[1].Tag.path + ": " + (result[1].Value == 255));
-    console.warn("WRITE: ", result[2].Tag.path + ": " + (result[2].Value == 255));
-    console.warn("WRITE: ", result[3].Tag.path + ": " + (result[3].Value == 255));
-    console.warn("WRITE: ", result[4].Tag.path + ": " + (result[4].Value == 255));
+    result.forEach((r) => {
+        console.info("WRITE: ", r.Tag.path, (r.Value == 255));
+    });
 });
 
 s7socket.connect();

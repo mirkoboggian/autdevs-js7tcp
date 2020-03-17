@@ -182,7 +182,8 @@ module.exports = class S7Socket extends events{
                     let results = [];
                     let offset = 21;
                     tags.forEach((tag) => {
-                        let tagResponse = buffer.slice(offset, offset + tag.bytesSize + 4);
+                        let normalizeByteSize = tag.bytesSize%2 ? (tag.bytesSize+1) : tag.bytesSize;
+                        let tagResponse = buffer.slice(offset, offset + normalizeByteSize + 4);
                         // assert tag result
                         if (tagResponse[0] != 0xFF) {
                             // Error on read.
@@ -204,7 +205,7 @@ module.exports = class S7Socket extends events{
                         // takes value
                         let tagValue = tagResponse.slice(4, 4 + tag.bytesSize);
                         results.push({Tag: tag, Value: Uint8Array.from(tagValue)});
-                        offset += tag.bytesSize + 4;
+                        offset += normalizeByteSize + 4;
                     });            
                     resolve(results);
                     return;

@@ -3,7 +3,7 @@ const events = require('events');
 
 module.exports = class S7Tag extends events {
 
-    constructor(db, areaCode, typeCode, offset, bit, array) {
+    constructor(db, areaCode, typeCode, offset, bit, array, value = null) {
         super(); 
         this.db = db;
         this.areaCode = areaCode ? areaCode.toUpperCase() : areaCode;
@@ -47,6 +47,8 @@ module.exports = class S7Tag extends events {
         this.dataType = this.getDataType();
         this.bitsSize = this.getBitsSize();
         this.bytesSize = this.getBytesSize();
+        
+        this.value = value ? value : this.getDefault();
     }
 
     static fromPath(path) {
@@ -90,15 +92,16 @@ module.exports = class S7Tag extends events {
         return dti;
     }
 
-    getBitsSize() {        
-        if (this.typeCode == "S") 
-            return s7comm.DataType.Info[this.typeCode].size * this.array + 16; // max length (b1) and length (b2)
-        return this.array ? 
-            s7comm.DataType.Info[this.typeCode].size * this.array : 
-            s7comm.DataType.Info[this.typeCode].size;
+    getBitsSize() {
+        return s7comm.DataType.Info[this.typeCode].size(this.array);
     }
 
     getBytesSize() {        
         return this.getBitsSize() / 8;
+    }
+
+    getDefault() {        
+        let dv = s7comm.DataType.Info[this.typeCode].default;
+        return dv;
     }
 }
