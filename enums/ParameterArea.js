@@ -15,7 +15,13 @@ var ParameterArea = {
     S7Counter: 0x1C,	             /* S7 counters */
     S7Timer: 0x1D,	               /* S7 timers */
     S7200Counter: 0x1E,	           /* IEC counters (200 family) */
-    S7200Timer: 0x1F	             /* IEC timers (200 family) */
+    S7200Timer: 0x1F,	             /* IEC timers (200 family) */
+    Info: {
+      "DB": {index: 0x84, name: "DB"},
+      "M": {index: 0x83, name: "Flags"},
+      "E": {index: 0x81, name: "Inputs"},
+      "A": {index: 0x82, name: "Outputs"},
+    }
 };
 
 if (Object.freeze)

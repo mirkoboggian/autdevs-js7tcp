@@ -29,9 +29,9 @@ module.exports = class S7Socket extends events{
         if (!this.connected()) {
             let e = new Error("Invalid socket status.");
             this._onError(e);
-        } else {
+        } else { 
             this.lock.acquire('socket', async() => {
-                return await this._read(tag.parArea, tag.areaNumber, tag.start, tag.len, tag.isBit);
+                return await this._read(tag.parameterArea, tag.db, tag.offset, tag.bytesSize, false);
             }).then((result) => {
                 this._onRead(result);
             }).catch((err) => {
@@ -46,7 +46,7 @@ module.exports = class S7Socket extends events{
             this._onError(e);
         } else {
             this.lock.acquire('socket', async() => {
-                return await this._write(tag.parArea, tag.areaNumber, tag.start, tag.isBit, values);
+                return await this._write(tag.parameterArea, tag.db, tag.offset, false, values);
             }).then((result) => {
                 this._onWrite(result);
             }).catch((err) => {                

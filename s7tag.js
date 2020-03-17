@@ -6,27 +6,27 @@ module.exports = class S7Tag extends events {
     constructor(db, area, type, offset, bit, array) {
         super(); 
         this.db = db;
-        this.area = area ? area.toUpperCase() : area;
-        this.type = type ? type.toUpperCase() : type;
+        this.areaCode = area ? area.toUpperCase() : area;
+        this.typeCode = type ? type.toUpperCase() : type;
         this.offset = offset;
         this.bit = bit;
         this.array = array;
 
         // area, type and offset must setted!
-        if (!this.area || !this.type || !this.offset) {
+        if (!this.areaCode || !this.typeCode || !this.offset) {
             let err = new Error("Invalid S7Path: area, type, offset must be always setted and bit must be in range 0-7!");
             throw err;
         }
 
         // Id db has value then type must be DB!
-        if (this.db && this.area != "DB") {
-            let err = new Error("Invalid S7Path: when define a DB the type must be 'DB' and not '" + this.area + "'");
+        if (this.db && this.areaCode != "DB") {
+            let err = new Error("Invalid S7Path: when define a DB the type must be 'DB' and not '" + this.areaCode + "'");
             throw err;
         } 
 
         // Can access bits only from Byte type
-        if (this.bit && this.type != "B") {
-            let err = new Error("Invalid S7Path: %bit must be an 'B' and not a '" + this.type + "'");
+        if (this.bit && this.typeCode != "B") {
+            let err = new Error("Invalid S7Path: %bit must be an 'B' and not a '" + this.typeCode + "'");
             throw err;
         }
 
@@ -37,10 +37,16 @@ module.exports = class S7Tag extends events {
         }
 
         // Id db has value then type must be DB!
-        if (this.type == "S" && !this.array) {
+        if (this.typeCode == "S" && !this.array) {
             let err = new Error("Invalid S7Path: string must be define an array size (string len)!");
             throw err;
         }
+
+        this.path = this.getPath();
+        this.parameterArea = this.getParameterArea();
+        this.dataType = this.getDataType();
+        this.bitsSize = this.getBitsSize();
+        this.bytesSize = this.getBytesSize();
     }
 
     static fromPath(path) {
@@ -65,26 +71,31 @@ module.exports = class S7Tag extends events {
     getPath() {
         let toRet = "";
         toRet += this.db ? "DB" + this.db + "." : "";
-        toRet += this.area;
-        toRet += this.type;
+        toRet += this.areaCode;
+        toRet += this.typeCode;
         toRet += this.offset;
         toRet += this.bit ? ".%" + this.bit : "";
         toRet += this.array ? "[" + this.array + "]" : "";
         return toRet;
     }
 
+    getParameterArea() {
+        let dti = s7comm.ParameterArea.Info[this.areaCode].index;
+        return dti;
+    }
+
     getDataType() {
         if (this.bit) return s7comm.DataType.Bit;
-        let dti = s7comm.DataType.Info[this.type].index;
+        let dti = s7comm.DataType.Info[this.typeCode].index;
         return dti;
     }
 
     getBitsSize() {        
-        if (this.type == "S") 
-            return s7comm.DataType.Info[this.type].size * this.array + 16; // max length (b1) and length (b2)
+        if (this.typeCode == "S") 
+            return s7comm.DataType.Info[this.typeCode].size * this.array + 16; // max length (b1) and length (b2)
         return this.array ? 
-            s7comm.DataType.Info[this.type].size * this.array : 
-            s7comm.DataType.Info[this.type].size;
+            s7comm.DataType.Info[this.typeCode].size * this.array : 
+            s7comm.DataType.Info[this.typeCode].size;
     }
 
     getBytesSize() {        

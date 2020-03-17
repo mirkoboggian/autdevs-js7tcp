@@ -211,7 +211,7 @@ s7socket.on('connected', () => {
 
     // // Polling read
     // setInterval(() => {
-    //     let tag = new S7Tag(S7Comm.ParameterArea.DB, 1, 0, 942, false);
+    //     let tag = S7Tag.fromPath("DB1.DBB0[942]");
     //     let data = s7socket.read(tag);
     // }, 50);
 
@@ -277,10 +277,10 @@ s7socket.on('write', (data) => {
     console.warn("WRITE: ", data);
 });
 
-// s7socket.connect();
+s7socket.connect();
 
 let tag = S7Tag.fromPath("DB123.DBDI10[5]")
-console.log(tag.getPath());
-console.log(tag.getDataType());
-console.log(tag.getBitsSize());
-console.log(tag.getBytesSize());
+console.log(tag.path);
+console.log(tag.dataType);
+console.log(tag.bitsSize);
+console.log(tag.bytesSize);
