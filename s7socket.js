@@ -63,7 +63,7 @@ module.exports = class S7Socket extends events{
             this.lock.acquire('socket', async() => {
                 return await this._multiRead(tags);
             }).then((result) => {
-                this._onRead(result);
+                this._onMultiRead(result);
             }).catch((err) => {
                 this._onError(err); 
             });
@@ -78,7 +78,7 @@ module.exports = class S7Socket extends events{
             this.lock.acquire('socket', async() => {
                 return await this._multiWrite(tags, values);
             }).then((result) => {
-                this._onWrite(result);
+                this._onMultiWrite(result);
             }).catch((err) => {
                 this._onError(err); 
             });
@@ -278,6 +278,14 @@ module.exports = class S7Socket extends events{
 
     _onWrite(results) {
         this.emit('write', results);
+    }
+
+    _onMultiRead(results) {
+        this.emit('multiRead', results);
+    }
+
+    _onMultiWrite(results) {
+        this.emit('multiWrite', results);
     }
 
     _onError(error) {
