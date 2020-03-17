@@ -5,12 +5,12 @@ module.exports = class S7Tag extends events {
 
     constructor(db, areaCode, typeCode, offset, bit, array, value = null) {
         super(); 
-        this.db = db;
+        this.db = parseInt(db);
         this.areaCode = areaCode ? areaCode.toUpperCase() : areaCode;
         this.typeCode = typeCode ? typeCode.toUpperCase() : typeCode;
-        this.offset = offset;
-        this.bit = bit;
-        this.array = array;
+        this.offset = parseInt(offset);
+        this.bit = parseInt(bit);
+        this.array = parseInt(array);
 
         // area, type and offset must setted!
         if (!this.areaCode || !this.typeCode || !this.offset) {
@@ -46,9 +46,7 @@ module.exports = class S7Tag extends events {
         this.parameterArea = this.getParameterArea();
         this.dataType = this.getDataType();
         this.bitsSize = this.getBitsSize();
-        this.bytesSize = this.getBytesSize();
-        
-        this.value = value ? value : this.getDefault();
+        this.bytesSize = this.getBytesSize();        
     }
 
     static fromPath(path) {
@@ -93,15 +91,31 @@ module.exports = class S7Tag extends events {
     }
 
     getBitsSize() {
-        return s7comm.DataType.Info[this.typeCode].size(this.array);
+        let bitsSize = s7comm.DataType.Info[this.typeCode].size(this.array);
+        return bitsSize;
     }
 
-    getBytesSize() {        
-        return this.getBitsSize() / 8;
+    getBytesSize() {
+        let bitsSize = this.getBitsSize();
+        return bitsSize / 8;
     }
 
     getDefault() {        
         let dv = s7comm.DataType.Info[this.typeCode].default;
         return dv;
+    }
+
+    fromBytes(bytes) {
+        // TODO: Check for array
+        let func = s7comm.DataType.Info[this.typeCode].fromBytes;
+        if(this.typeCode=="S") return func(bytes);
+        return func(bytes);
+    }
+
+    toBytes(value) {
+        // TODO: Check for array
+        let func = s7comm.DataType.Info[this.typeCode].toBytes;
+        if(this.typeCode=="S") return func(value, this.array);
+        return func(value);
     }
 }

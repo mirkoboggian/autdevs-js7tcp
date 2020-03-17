@@ -339,8 +339,9 @@ _writeItemValuesRequest = (values) => {
     ret[1] = 0x04; // Bit = 3, Counter/Timer = 9, Byte/Word/DWord.. = 4
     ret[2] = Math.floor(values.length * 8 / 0x100); // Counter/Timer *= 2, Else *= 8
     ret[3] = (values.length * 8 % 0x100); // Counter/Timer *= 2, Else *= 8
-    // Add Values    
-    ret = ret.concat(values);
+    // Add Values
+    let valArray = Array.prototype.slice.call(values, 0);    
+    ret = ret.concat(valArray);
     // Return
     return ret;
 }
