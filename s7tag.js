@@ -13,31 +13,31 @@ module.exports = class S7Tag extends events {
         this.array = array ? parseInt(array) : null;
 
         // area, type and offset must setted!
-        if (!this.areaCode || !this.typeCode || !this.offset) {
+        if (this.areaCode == null || this.typeCode == null || this.offset == null) {
             let err = new Error("Invalid S7Path: area, type, offset must be always setted and bit must be in range 0-7!");
             throw err;
         }
 
         // Id db has value then type must be DB!
-        if (this.db && this.areaCode != "DB") {
+        if (this.db != null && this.areaCode != "DB") {
             let err = new Error("Invalid S7Path: when define a DB the type must be 'DB' and not '" + this.areaCode + "'");
             throw err;
         } 
 
         // Can access bits only from Byte type
-        if (this.bit && this.typeCode != "B") {
+        if (this.bit!= null && this.typeCode != "B") {
             let err = new Error("Invalid S7Path: %bit must be an 'B' and not a '" + this.typeCode + "'");
             throw err;
         }
 
         // Id db has value then type must be DB!
-        if (this.bit && this.array) {
+        if (this.bit!= null && this.array!= null) {
             let err = new Error("Invalid S7Path: bit and array cannot be both set!");
             throw err;
         }
 
         // Id db has value then type must be DB!
-        if (this.typeCode == "S" && !this.array) {
+        if (this.typeCode == "S" && this.array == null) {
             let err = new Error("Invalid S7Path: string must be define an array size (string len)!");
             throw err;
         }
@@ -68,7 +68,7 @@ module.exports = class S7Tag extends events {
         }    
     }
 
-    #getPath() {
+    getPath() {
         let toRet = "";
         toRet += this.db ? "DB" + this.db + "." : "";
         toRet += this.areaCode;
@@ -79,28 +79,28 @@ module.exports = class S7Tag extends events {
         return toRet;
     }
 
-    #getParameterArea() {
+    getParameterArea() {
         let dti = s7comm.ParameterArea.Info[this.areaCode].index;
         return dti;
     }
 
-    #getDataType() {
+    getDataType() {
         if (this.bit) return s7comm.DataType.Bit;
         let dti = s7comm.DataType.Info[this.typeCode].index;
         return dti;
     }
 
-    #getBitsSize() {
+    getBitsSize() {
         let bitsSize = s7comm.DataType.Info[this.typeCode].size(this.array ? this.array : 1);
         return bitsSize;
     }
 
-    #getBytesSize() {
+    getBytesSize() {
         let bitsSize = this.getBitsSize();
         return bitsSize / 8;
     }
 
-    #getDefault() {        
+    getDefault() {        
         let dv = s7comm.DataType.Info[this.typeCode].default;
         return dv;
     }
