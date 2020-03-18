@@ -7,6 +7,7 @@ Per questo motivo ho rilasciato nel Git anche la cartella _.vscode_ che può ess
 La base di questo progetto è un mio progetto C# sviluppato circa 10 anni fa e realizzato semplicemente tramite Reverse-Engineering. Cercando in rete ho trovato diversi progetti che mi hanno permesso di commentare e migliorare la parte relativa al protocollo di comunicazione:
 * [libnodave](http://libnodave.sourceforge.net/) (C, C++) 
 * [sharp7](http://snap7.sourceforge.net/sharp7.html) (C#)
+
 In questo modo ho quindi commentato gran parte del mio codice relativo al protocollo di comunicazione inserendo la gestione degli _ENUM_. Rispetto ai progetti sopra elencati questo è un semplice driver di scambio dati per i dati più comuni:
 * DB
 * Merker
@@ -35,6 +36,7 @@ Un tag è formato dalle seguenti proprietà:
 * Offset: spiazzamento iniziale in Byte
 * Bit: se presente indica il Bit del BYTE di offset
 * Array: se presente indica la dimensione dell'array o della stringa
+
 I TypeCode identificano i tipi base (bit, byte, valori interi a 16/32 bit con e senza segno, valori reali 32bit e stringhe).
 
   
