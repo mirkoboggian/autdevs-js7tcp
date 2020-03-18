@@ -55,7 +55,7 @@ I TypeCode identificano i tipi base (bit, byte, caratteri, valori interi a 16/32
 ## TODO
 * Letture/Scritture a Bit non ancora realizzate/testate.
 * TagPath: L'espressione regolare non è GARANTITA. Ci sono troppi sottocasi da valutare..
-* Eseguire più richeiste di lettura/scrittura per quei Tags o gruppi di Tags che superano i limiti in Bytes per ogni richiesta
+* Eseguire più richieste di lettura/scrittura per quei Tags o gruppi di Tags che superano i limiti in Bytes per ogni richiesta
 
 ## NOTE
 * Le letture/scritture Timer/Contatori non verranno mai testate/implementate.
