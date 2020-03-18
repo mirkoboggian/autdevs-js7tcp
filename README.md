@@ -49,9 +49,11 @@ Da cui le seguenti regole:
 * Non si possono fare Array di Bit
 * Non si possono fare Array di String
 
+## In fase di sviluppo
+* gestione del driver e dei tags da file config.
 
 ## TODO
-* Letture/Scritture a Bit non ancora realizzate. Rispetto ai progetti _libnodave_ e _sharp7_ che usano un protocollo nativo per la lettura/scrittura dei _bit_ credo che implementerò questa parte mantenendo la lettura/scrittura a byte (più onerosa inq uanto richiede sempre una lettura prima di una scrittura).
+* Letture/Scritture a Bit non ancora realizzate/testate.
 * TagPath: L'espressione regolare non è GARANTITA. Ci sono troppi sottocasi da valutare..
 * Eseguire più richeiste di lettura/scrittura per quei Tags o gruppi di Tags che superano i limiti in Bytes per ogni richiesta
 
