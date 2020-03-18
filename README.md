@@ -37,10 +37,9 @@ Un tag è formato dalle seguenti proprietà:
 * Bit: se presente indica il Bit del BYTE di offset
 * Array: se presente indica la dimensione dell'array o della stringa
 
-I TypeCode identificano i tipi base (bit, byte, valori interi a 16/32 bit con e senza segno, valori reali 32bit e stringhe).
+I TypeCode identificano i tipi base (bit, byte, caratteri, valori interi a 16/32 bit con e senza segno, valori reali 32bit e stringhe).
 
-  
-Da cui le seguenti regole:
+### Regole di definizione dei PATH:
 * Ogni tag DEVE avere SEMPRE specificato almeno:
     * AreaCode, TypeCode, Offset
 * Se l'AreaCode è DB deve essere specificato il numero della DB
