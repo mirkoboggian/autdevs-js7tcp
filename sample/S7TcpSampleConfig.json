@@ -1,0 +1,10 @@
+{
+    "name": "PLC",
+    "ip": "192.168.2.22",
+    "port" : 102,
+    "rack" : 0,
+    "slot" : 1,
+    "autoreconnect" : 10000,
+    "timeout" : 60000,
+    "rwTimeout" : 5000    
+}

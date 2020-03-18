@@ -1,0 +1,7 @@
+{
+    "tasks": [
+        { "name": "100ms",  "msCycle": 100  }, 
+        { "name": "1000ms",  "msCycle": 1000  },
+        { "name": "2000ms",  "msCycle": 2000  }
+    ]
+}

@@ -1,0 +1,7 @@
+{
+    "tags": [
+        {  "tagsprovider": "s7tcp",     "symbol" : "Temperatura",     "path": "DB1.DBR3600",          "rights": "RW",     "task": "100ms" },
+        {  "tagsprovider": "s7tcp",     "symbol" : "Messaggio",       "path": "DB1.DBS3604[20]",      "rights": "RW",     "task": "100ms" },
+        {  "tagsprovider": "s7tcp",     "symbol" : "Stati",           "path": "DB1.DBI3628[10]",      "rights": "RW",     "task": "100ms" }
+    ]
+}
