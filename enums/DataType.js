@@ -9,7 +9,6 @@ const getStringSize = (len) => { return 8 * (len + 2);}
 //#region Null
 const RetNull = () => {return null}
 //#endregion
-
 //#region Conversions to Bytes
 const CharToBytes = (val) => {
   let buf = new Buffer.alloc(1);

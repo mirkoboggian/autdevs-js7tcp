@@ -15,10 +15,27 @@ module.exports = class S7Socket extends events{
         this.timeout = timeout;
         this.rwTimeout = rwTimeout;
         this.lock = new alock({timeout: this.rwTimeout});
+
+        // internal use
+        this.connecting = false;
+        this.reconnectIntervall = null;
+        if(this.autoreconnect > 0) {
+            this.connect();
+            this.reconnectIntervall = setInterval(() => {
+                if (!this.connected() && !this.connecting) {
+                    this.connect();
+                }
+            }, this.autoreconnect);
+        }        
     }
     
-    connect() {
-        this._connect();
+    async connect() {
+        this.connecting = true;
+        this._connect().then(() => {
+            this.connecting = false;
+        }).catch((e) => {
+            this.connecting = false;
+        });        
     }
 
     connected() {

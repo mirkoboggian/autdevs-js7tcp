@@ -50,6 +50,7 @@ I TypeCode identificano i tipi base (bit, byte, caratteri, valori interi a 16/32
 
 ## In fase di sviluppo
 * gestione del driver e dei tags da file config.
+* algoritmo per il riordino dei tags in gruppi per velocizzare le letture in polling
 
 ## TODO
 * Letture/Scritture a Bit non ancora realizzate/testate.

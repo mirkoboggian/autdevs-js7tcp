@@ -16,5 +16,11 @@
             "name": "sample2",
             "program": "${workspaceFolder}/sample/index_2.js"
         },
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "sample3",
+            "program": "${workspaceFolder}/sample/index_3.js"
+        },
     ]
 }
