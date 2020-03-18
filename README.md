@@ -8,7 +8,7 @@ La base di questo progetto è un mio progetto C# sviluppato circa 10 anni fa e r
 * [libnodave](http://libnodave.sourceforge.net/) (C, C++) 
 * [sharp7](http://snap7.sourceforge.net/sharp7.html) (C#)
 
-In questo modo ho quindi commentato gran parte del mio codice relativo al protocollo di comunicazione inserendo la gestione degli _ENUM_. Rispetto ai progetti sopra elencati questo è un semplice driver di scambio dati per i dati più comuni:
+Rispetto ai progetti sopra elencati questo è un semplice driver di scambio dati per i dati più comuni:
 * DB
 * Merker
 * Input
