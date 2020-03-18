@@ -8,7 +8,7 @@
             "type": "node",
             "request": "launch",
             "name": "sample1",
-            "program": "${workspaceFolder}/sample/index_1.js"
+            "program": "${workspaceFolder}/sample/index_1.js",
         },
         {
             "type": "node",

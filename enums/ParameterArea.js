@@ -17,10 +17,10 @@ var ParameterArea = {
     S7200Counter: 0x1E,	           /* IEC counters (200 family) */
     S7200Timer: 0x1F,	             /* IEC timers (200 family) */
     Info: {
-      "DB": {index: 0x84, name: "DB"},
-      "M": {index: 0x83, name: "Flags"},
-      "E": {index: 0x81, name: "Inputs"},
-      "A": {index: 0x82, name: "Outputs"},
+      "DB": {index: 0x84, name: "DB"      },
+      "M":  {index: 0x83, name: "Flags"   },
+      "E":  {index: 0x81, name: "Inputs"  },
+      "A":  {index: 0x82, name: "Outputs" },
     }
 };
 

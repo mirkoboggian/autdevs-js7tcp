@@ -8,7 +8,9 @@
   },
   "devDependencies": {},
   "scripts": {
-    "debug": "node --nolazy --inspect-brk=9229 myProgram.js"
+    "sample1": "node ./sample/index_1.js",
+    "sample2": "node ./sample/index_2.js",
+    "sample3": "node ./sample/index_3.js"
   },
   "author": "Mirko Boggian <mirko.boggian@gmail.com> (http://www.mirkoboggian.com)",
   "license": "UNLICENSED",

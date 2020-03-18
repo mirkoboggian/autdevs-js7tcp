@@ -8,23 +8,33 @@ var tasks = [];
 //#region S7Tcp
 
 // config file
-let configPath = __dirname + "/config_3.json";
-if (!fs.existsSync(configPath)) {
-    let err = new Error("config.json " + configPath + " not found.");
-    throw err;
-} 
-
+// let configPath = __dirname + "/S7TcpSampleConfig.json";
+// if (!fs.existsSync(configPath)) {
+//     let err = new Error("config.json " + configPath + " not found.");
+//     throw err;
+// } 
 // config object
-let config = {};
-try {
-    let jsonFile = fs.readFileSync(configPath);
-    config = JSON.parse(jsonFile);
-} catch (e) {
-    let err = new Error("config.json " + configPath + " is not a valid JSON file.");
-    throw e;
-}
-
+//let config = {};
+// try {
+//     let jsonFile = fs.readFileSync(configPath);
+//     config = JSON.parse(jsonFile);
+// } catch (e) {
+//     let err = new Error("config.json " + configPath + " is not a valid JSON file.");
+//     throw e;
+// }
 // create S7Tcp Server
+//var s7tcp = S7Tcp.fromConfig(config);
+
+let config = {
+    "name": "PLC",
+    "ip": "192.168.1.91",
+    "port" : 102,
+    "rack" : 0,
+    "slot" : 1,
+    "autoreconnect" : 10000,
+    "timeout" : 60000,
+    "rwTimeout" : 5000    
+}
 var s7tcp = S7Tcp.fromConfig(config);
 
 // register to s7tcp events

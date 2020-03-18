@@ -87,7 +87,7 @@ exports.NegotiatePDULengthRequest = () => {
     ret[3] = (TOTALLen % 0x100); // Low part of packet lenght (entire frame, payload and TPDU included)
     // COTP (ISO 8073 Header)
     ret[4] = 0x02;
-    ret[5] = 0xF0; // Connect on S7comm layer (s7comm.param.func = 0xf0, Setup communication)
+    ret[5] = FunctionCode.OpenS7Connection; // Connect on S7comm layer (s7comm.param.func = 0xf0, Setup communication)
     ret[6] = 0x80; 
     // PDU Header
     ret[7] = 0x32; // protocol identifier (S7)
@@ -101,7 +101,7 @@ exports.NegotiatePDULengthRequest = () => {
     ret[15] = Math.floor(DATALen / 0x100);
     ret[16] = (DATALen % 0x100);
     // PDU Parameters
-    ret[17] = 0xF0;
+    ret[17] = FunctionCode.OpenS7Connection; // Connect on S7comm layer (s7comm.param.func = 0xf0, Setup communication)
     ret[18] = 0x00;
     ret[19] = 0x00;
     ret[20] = 0x01; // 1=PG Communication, 2=OP Communication, 3=Step7Basic Communication
@@ -174,7 +174,7 @@ _readHeaderRequest = (itemsCount) => {
     ret[3] = (TOTALLen % 0x100); // Low part of packet lenght (entire frame, payload and TPDU included)
     // COTP (ISO 8073 Header)
     ret[4] = 0x02;
-    ret[5] = 0xF0; // Connect on S7comm layer (s7comm.param.func = 0xf0, Setup communication)
+    ret[5] = FunctionCode.OpenS7Connection; // Connect on S7comm layer (s7comm.param.func = 0xf0, Setup communication)
     ret[6] = 0x80; 
     // PDU Header
     ret[7] = 0x32; // protocol identifier (S7)
@@ -265,7 +265,7 @@ _writeHeaderRequest = (itemsValues) => {
     ret[3] = (TOTALLen % 0x100); // Low part of packet lenght (entire frame, payload and TPDU included)
     // COTP (ISO 8073 Header)
     ret[4] = 0x02;
-    ret[5] = 0xF0; // Connect on S7comm layer (s7comm.param.func = 0xf0, Setup communication)
+    ret[5] = FunctionCode.OpenS7Connection; // Connect on S7comm layer (s7comm.param.func = 0xf0, Setup communication)
     ret[6] = 0x80; 
     // PDU Header
     ret[7] = 0x32; // protocol identifier (S7)
