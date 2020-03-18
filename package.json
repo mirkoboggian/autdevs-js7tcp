@@ -8,6 +8,7 @@
   },
   "devDependencies": {},
   "scripts": {
+    "generate-docs": "jsdoc -c ./jsdoc/config.json",
     "sample1": "node ./sample/index_1.js",
     "sample2": "node ./sample/index_2.js",
     "sample3": "node ./sample/index_3.js"
