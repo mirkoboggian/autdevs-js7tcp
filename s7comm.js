@@ -5,8 +5,6 @@ const FunctionCode = require("./enums/FunctionCode");
 const ParameterArea = require("./enums/ParameterArea");
 const PDUType = require("./enums/PDUType");
 const DataType = require("./enums/DataType");
-
-// Enums exports
 exports.CPUType = CPUType;
 exports.ErrorCode = ErrorCode;
 exports.FunctionCode = FunctionCode;
@@ -25,14 +23,17 @@ if (Object.freeze) {
     Object.freeze(MAXWRITEBYTES);
     Object.freeze(MAXITEMSLIST);
 }
-
-// Consts exports
 exports.MAXPDUSIZE = MAXPDUSIZE;
 exports.MAXREADBYTES = MAXREADBYTES;
 exports.MAXWRITEBYTES = MAXWRITEBYTES;
 exports.MAXITEMSLIST = MAXITEMSLIST;
 
- // ISO Connection Request telegram (contains also ISO Header and COTP Header)
+/**
+ * ISO Connection Request telegram (contains also ISO Header and COTP Header)
+ * @param {number} rack CPU Rack number
+ * @param {number} slot CPU slot number 
+ * @returns {Array of byte}
+ */
 exports.RegisterSessionRequest = (rack, slot) => {
     // Consts
     const TPKTLen = 4;
@@ -67,7 +68,11 @@ exports.RegisterSessionRequest = (rack, slot) => {
     // Return
     return ret;
 }
-// S7 PDU Negotiation Telegram (contains also ISO Header and COTP Header)
+
+/**
+ * S7 PDU Negotiation Telegram (contains also ISO Header and COTP Header)
+ * @returns {Array of byte}
+ */
 exports.NegotiatePDULengthRequest = () => {
     // Consts
     const TPKTLen = 4;
@@ -115,7 +120,12 @@ exports.NegotiatePDULengthRequest = () => {
     // Return
     return ret;
 }
-// S7 Variable MultiRead
+
+/**
+ * S7 Variable MultiRead full protocol request
+ * @param {Array of S7Tag} tags The list of tag to read
+ * @returns {Array of byte}
+ */
 exports.ReadRequest = (tags) => {
     // Request
     let ret = [];
@@ -130,7 +140,13 @@ exports.ReadRequest = (tags) => {
     }
     return ret;
 }
-// S7 Variable MultiWrite
+
+/**
+ * S7 Variable MultiWrite full protocol request 
+ * @param {Array of S7Tag} tags The list of tag to write
+ * @param {Array of values} values The list of value to write
+ * @returns {Array of byte}
+ */
 exports.WriteRequest = (tags, values) => {
     // Request
     let ret = [];
@@ -151,7 +167,6 @@ exports.WriteRequest = (tags, values) => {
     }
     return ret;
 }
-
 
 // S7 Variable MultiRead Header
 _readHeaderRequest = (itemsCount) => {
@@ -193,6 +208,7 @@ _readHeaderRequest = (itemsCount) => {
     // Return
     return ret;
 }
+
 // S7 Variable MultiRead Item
 _readItemRequest = (parArea, areaNumber, start, len, isBit) => {
     // Request
@@ -235,6 +251,7 @@ _readItemRequest = (parArea, areaNumber, start, len, isBit) => {
     // Return
     return ret;
 }
+
 // S7 Variable MultiRead Header
 _writeHeaderRequest = (itemsValues) => {
     // Analize values
@@ -284,6 +301,7 @@ _writeHeaderRequest = (itemsValues) => {
     // Return
     return ret;
 }
+
 // S7 Variable MultiWrite Item
 _writeItemRequest = (parArea, areaNumber, start, len, isBit) => {
     // Request
@@ -328,6 +346,7 @@ _writeItemRequest = (parArea, areaNumber, start, len, isBit) => {
     ret[11] = (start % 0x100);
     return ret;
 }
+
 // S7 Variable MultiWrite Values
 _writeItemValuesRequest = (values) => {
     // Normalize values: Only Even bytes of values

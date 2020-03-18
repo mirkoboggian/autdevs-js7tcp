@@ -1,9 +1,18 @@
 const s7comm = require("./s7comm");
 const events = require('events');
 
-module.exports = class S7Tag extends events {
+module.exports = class S7Tag extends events {    
 
-    constructor(db, areaCode, typeCode, offset, bit, array, value = null) {
+    /**
+     * 
+     * @param {number} db The DB number: only if areaCode is DB
+     * @param {string} areaCode The string that represent the DataType (necessary)
+     * @param {string} typeCode The string that represent the tag's value type (necessary)
+     * @param {number} offset The address offset (necessary)
+     * @param {number} bit The bit number: only if typeCode is B (byte) and the tag is a Bit
+     * @param {number} array The array size or string length: cannot be used when type is Bit
+     */
+    constructor(db, areaCode, typeCode, offset, bit, array) {
         super(); 
         this.db = db ? parseInt(db) : null;
         this.areaCode = areaCode ? areaCode.toUpperCase() : areaCode;
@@ -49,6 +58,13 @@ module.exports = class S7Tag extends events {
         this.bytesSize = this.getBytesSize();        
     }
 
+    /**
+     * From a well formatted path is possibile to define all S7Tag paramters
+     * Sample:
+     * DB10.DBR40[20] > { DB: 10, AreaCode: "DB", typeCode: "R" (real), offset: 40, bit: null, array: 20
+     * @param {*} path the well formatted S7Tag's path
+     * @returns S7Tag
+     */
     static fromPath(path) {
         let re_db = "(db(?<db>[0-9]+).)?";
         let re_area = "(?<area>db{1}|m{1}|e{1}|a{1}){1}";
@@ -68,6 +84,10 @@ module.exports = class S7Tag extends events {
         }    
     }
 
+    /**
+     * Return a well formatted tag's path
+     * @returns {string} The tag's path
+     */
     getPath() {
         let toRet = "";
         toRet += this.db ? "DB" + this.db + "." : "";
@@ -79,32 +99,57 @@ module.exports = class S7Tag extends events {
         return toRet;
     }
 
+    /**
+     * From areaCode return the ParameterArea value
+     * @returns {ParameterArea} The ParameterArea value
+     */
     getParameterArea() {
         let dti = s7comm.ParameterArea.Info[this.areaCode].index;
         return dti;
     }
 
+    /**
+     * From typeCode return the DataType value
+     * @returns {DataType} The DataType value
+     */
     getDataType() {
         if (this.bit) return s7comm.DataType.Bit;
         let dti = s7comm.DataType.Info[this.typeCode].index;
         return dti;
     }
 
+    /**
+     * From typeCode return the DataType size in bits
+     * @returns {numeric} The DataType size in bits
+     */
     getBitsSize() {
         let bitsSize = s7comm.DataType.Info[this.typeCode].size(this.array ? this.array : 1);
         return bitsSize;
     }
 
+    /**
+     * From typeCode return the DataType size in bytes
+     * @returns {numeric} The DataType size in bytes
+     */
     getBytesSize() {
         let bitsSize = this.getBitsSize();
         return bitsSize / 8;
     }
 
+    /**
+     * From typeCode return the the defualt value
+     * @returns {object} The default value for s7tag dataType
+     */
     getDefault() {        
         let dv = s7comm.DataType.Info[this.typeCode].default;
         return dv;
     }
 
+    /**
+     * Convert an array of bytes to a value of typeCode
+     * @param {Array of bytes} bytes Bytes representation of value
+     * @returns {object} The value conversion
+     */
     fromBytes(bytes) {
         let func = s7comm.DataType.Info[this.typeCode].fromBytes;        
         if(this.typeCode=="S") return func(bytes);
@@ -121,6 +166,11 @@ module.exports = class S7Tag extends events {
         return func(bytes);
     }
 
+    /**
+     * Convert a value of typeCode to an array of bytes
+     * @param {object} value The value to convert
+     * @returns {Array of bytes} The array of bytes conversion
+     */
     toBytes(value) {
         let func = s7comm.DataType.Info[this.typeCode].toBytes;
         if(this.typeCode=="S") return func(value, this.array);                

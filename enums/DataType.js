@@ -10,6 +10,11 @@ const getStringSize = (len) => { return 8 * (len + 2);}
 const RetNull = () => {return null}
 //#endregion
 //#region Conversions to Bytes
+const ByteToBytes = (val) => {
+  let buf = new Buffer.alloc(1);
+  buf[0] = val;
+  return buf;
+};
 const CharToBytes = (val) => {
   let buf = new Buffer.alloc(1);
   let ret = buf.write(val);
@@ -61,6 +66,9 @@ const StringToBytes = (val, maxLen) => {
 };
 //#endregion
 //#region Bytes to Type
+const BytesToByte = (array) => {
+  return array[0];
+};
 const BytesToChar = (array) => {
   let buf = Buffer.from(array);
   let ret = buf.toString();
@@ -131,8 +139,8 @@ var DataType = {
     // Utils
     Info: {
       "%":  {index: 0x01, name: "Bit",      size: get8BitSize,    toBytes: RetNull,       fromBytes: RetNull,        default: 0x00  }, // S7 sends 1 byte per bit
-      "B":  {index: 0x02, name: "Byte",     size: get8BitSize,    toBytes: RetNull,       fromBytes: RetNull,        default: 0x00  },
-      "UB": {index: 0x02, name: "UByte",    size: get8BitSize,    toBytes: RetNull,       fromBytes: RetNull,        default: 0x00  },
+      "B":  {index: 0x02, name: "Byte",     size: get8BitSize,    toBytes: ByteToBytes,   fromBytes: BytesToByte,    default: 0x00  },
+      "UB": {index: 0x02, name: "UByte",    size: get8BitSize,    toBytes: ByteToBytes,   fromBytes: BytesToByte,    default: 0x00  },
       "C":  {index: 0x03, name: "Char",     size: get8BitSize,    toBytes: CharToBytes,   fromBytes: BytesToChar,    default: ''    },
       "W":  {index: 0x04, name: "Word",     size: get16BitSize,   toBytes: WordToBytes,   fromBytes: BytesToWord,    default: 0     },
       "I":  {index: 0x05, name: "Int",      size: get16BitSize,   toBytes: IntToBytes,    fromBytes: BytesToInt,     default: 0     },

@@ -4,6 +4,17 @@ const events = require('events');
 
 module.exports = class S7Tcp extends events{
 
+    /**
+     * S7Tcp class constructor
+     * @param {string} name An unique name
+     * @param {string} ip The CPU TCP address (xxx.xxx.xxx.xxx)
+     * @param {number} port The CPU TPC port
+     * @param {number} rack The CPU rack
+     * @param {number} slot The CPU slot
+     * @param {number} autoreconnect milliseconds to wait before try to reconnect
+     * @param {number} timeout milliseconds of socket inactivity before close
+     * @param {number} rwTimeout milliseconds of waiting before acquire socket's lock for read/write operations
+     */
     constructor(name, ip = "127.0.0.1", port = 102, rack = 0, slot = 2, 
                 autoreconnect = 10000, timeout = 60000, rwTimeout = 5000) {  
         super();   
@@ -18,14 +29,18 @@ module.exports = class S7Tcp extends events{
         this.rwTimeout = rwTimeout; 
         // internal
         this.socket = new S7Socket(this.ip, this.port, this.rack, this.slot, this.autoreconnect, this.timeout, this.rwTimeout);
-        this.socket.on('connect', () => this._onConnect());
-        this.socket.on('read', (result) => this._onRead(result));
-        this.socket.on('write', (result) => this._onWrite(result));
-        this.socket.on('multiRead', (result) => this._onMultiRead(result));
-        this.socket.on('multiWrite', (result) => this._onMultiWrite(result));
-        this.socket.on('error', (error) => this._onError(error));
+        this.socket.on('connect', () => this.#onConnect());
+        this.socket.on('read', (result) => this.#onRead(result));
+        this.socket.on('write', (result) => this.#onWrite(result));
+        this.socket.on('multiRead', (result) => this.#onMultiRead(result));
+        this.socket.on('multiWrite', (result) => this.#onMultiWrite(result));
+        this.socket.on('error', (error) => this.#onError(error));
     }
 
+    /**
+     * Create a S7Tcp instance using a config object
+     * @param {object} config object with parameters like {name: "s7tcp", ip:"192.168.1.1", .. }
+     */
     static fromConfig(config) {
         try {
             let plc = new S7Tcp(config.name, config.ip, config.port, config.rack, 
@@ -37,31 +52,34 @@ module.exports = class S7Tcp extends events{
         }
     }
 
+    /**
+     * Function to check if S7Socket is connected
+     */
     connected() {
         return this.socket.connected();
     }
 
-    _onConnect() {
+    #onConnect = () => {
         this.emit('connect');
     }
 
-    _onRead(results) {
+    #onRead = (results) => {
         this.emit('read', results);
     }
 
-    _onWrite(results) {
+    #onWrite = (results) => {
         this.emit('write', results);
     }
 
-    _onMultiRead(results) {
+    #onMultiRead = (results) => {
         this.emit('multiRead', results);
     }
 
-    _onMultiWrite(results) {
+    #onMultiWrite = (results) => {
         this.emit('multiWrite', results);
     }
 
-    _onError(error) {
+    #onError = (error) => {
         this.emit('error', error);
     }
 

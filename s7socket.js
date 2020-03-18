@@ -5,6 +5,16 @@ var alock = require('async-lock');
 
 module.exports = class S7Socket extends events{
 
+    /**
+     * S7Socket constructor. This class manages connection/read and write operations using a TCP socket
+     * @param {string} ip The CPU TCP address (xxx.xxx.xxx.xxx)
+     * @param {number} port The CPU TPC port
+     * @param {number} rack The CPU rack
+     * @param {number} slot The CPU slot
+     * @param {number} autoreconnect milliseconds to wait before try to reconnect
+     * @param {number} timeout milliseconds of socket inactivity before close
+     * @param {number} rwTimeout milliseconds of waiting before acquire socket's lock for read/write operations
+     */
     constructor(ip = "127.0.0.1", port = 102, rack = 0, slot = 2, autoreconnect = 10000, timeout = 60000, rwTimeout = 5000) {  
         super();        
         this.ip = ip;
@@ -29,80 +39,104 @@ module.exports = class S7Socket extends events{
         }        
     }
     
+    /**
+     * Try to connect the Socket to CPU
+     */
     async connect() {
         this.connecting = true;
-        this._connect().then(() => {
+        this.#connect().then(() => {
             this.connecting = false;
         }).catch((e) => {
             this.connecting = false;
         });        
     }
 
+    /**
+     * Check if S7socket is connected
+     */
     connected() {
         return (this._socket && this._socket.readyState == "open");
     }
 
+    /**
+     * Read from S7 CPU a single tag (MAX. 942 bytes)
+     * @param {S7Tag} tag The tag to read
+     */
     read(tag) {    
         if (!this.connected()) {
             let e = new Error("Invalid socket status.");
-            this._onError(e);
+            this.#onError(e);
         } else { 
             this.lock.acquire('socket', async() => {
-                return await this._multiRead([tag]);
+                return await this.#multiRead([tag]);
             }).then((result) => {
-                this._onRead(result[0]);
+                this.#onRead(result[0]);
             }).catch((err) => {
-                this._onError(err); 
+                this.#onError(err); 
             });
         }    
     }
 
+    /**
+     * Write to S7 CPU a single tag (MAX. 932 bytes)
+     * @param {S7Tag} tag The tag to write
+     * @param {object} value The value to write
+     */
     write(tag, value) {
         if (!this.connected()) {
             let e = new Error("Invalid socket status.");
-            this._onError(e);
+            this.#onError(e);
         } else {
             this.lock.acquire('socket', async() => {
-                return await this._multiWrite([tag], [value]);
+                return await this.#multiWrite([tag], [value]);
             }).then((result) => {
-                this._onWrite(result[0]);
+                this.#onWrite(result[0]);
             }).catch((err) => {                
-                this._onError(err); 
+                this.#onError(err); 
             });
         }        
     }
 
+    /**
+     * Read from S7 CPU a list of tags (MAX. 20 tags)
+     * @param {Array of S7Tag} tags The tags to read
+     */
     multiRead(tags) {
         if (!this.connected()) {
             let e = new Error("Invalid socket status.");
-            this._onError(e);
+            this.#onError(e);
         } else {
             this.lock.acquire('socket', async() => {
-                return await this._multiRead(tags);
+                return await this.#multiRead(tags);
             }).then((result) => {
-                this._onMultiRead(result);
+                this.#onMultiRead(result);
             }).catch((err) => {
-                this._onError(err); 
+                this.#onError(err); 
             });
         }   
     }
 
+    /**
+     * Write to S7 CPU a list of tags/values (MAX. 20 tags)
+     * @param {Array of S7Tag} tags The tags to write
+     * @param {Array of value} values The values to write
+     */
     multiWrite(tags, values) {
         if (!this.connected()) {
             let e = new Error("Invalid socket status.");
-            this._onError(e);
+            this.#onError(e);
         } else {
             this.lock.acquire('socket', async() => {
-                return await this._multiWrite(tags, values);
+                return await this.#multiWrite(tags, values);
             }).then((result) => {
-                this._onMultiWrite(result);
+                this.#onMultiWrite(result);
             }).catch((err) => {
-                this._onError(err); 
+                this.#onError(err); 
             });
         }   
     }
 
-    _connect() {
+    #connect = () => {
         let self = this;
         return new Promise((resolve, reject) => {
             if (self._socket) {
@@ -110,14 +144,14 @@ module.exports = class S7Socket extends events{
                 self._socket.destroy();
             }                    
             self._socket = new net.Socket();
-            self._socket.on('error', (error) => { self._onError(error); return; });
+            self._socket.on('error', (error) => { self.#onError(error); return; });
             self._socket.setTimeout(self.timeout);
             self._socket.setKeepAlive(true, self.timeout); 
             self._socket.connect(self.port, self.ip, () => {
                 let request = Uint8Array.from(s7comm.RegisterSessionRequest(self.rack, self.slot));
                 let result = self._socket.write(request, (e) => {
                     if (e) {
-                        self._onError(e);
+                        self.#onError(e);
                         reject(e);
                         return;
                     };
@@ -125,14 +159,14 @@ module.exports = class S7Socket extends events{
                         let response = Uint8Array.from(buffer);
                         if (response.length != 22) {
                             let e = new Error("Error registering session!");
-                            self._onError(e); 
+                            self.#onError(e); 
                             reject(e);
                             return;
                         }
                         let request = Uint8Array.from(s7comm.NegotiatePDULengthRequest());
                         let result = self._socket.write(request, (e) => {
                             if (e) { 
-                                self._onError(e); 
+                                self.#onError(e); 
                                 reject(e);
                                 return;
                             };
@@ -140,11 +174,11 @@ module.exports = class S7Socket extends events{
                                 let response = Uint8Array.from(buffer);
                                 if (response.length != 27) {
                                     let e = new Error("Error negotiating PDU!");
-                                    self._onError(e);
+                                    self.#onError(e);
                                     reject(e);
                                     return;
                                 }
-                                self._onConnect();
+                                self.#onConnect();
                                 resolve(true);
                             });
                         });
@@ -154,8 +188,7 @@ module.exports = class S7Socket extends events{
         });                
     }    
 
-    _multiRead(tags)
-    {    
+    #multiRead = (tags) => {    
         let self = this;
         return new Promise((resolve, reject) => {
             // assert s7comm.MAXITEMSLIST
@@ -231,8 +264,7 @@ module.exports = class S7Socket extends events{
         }); 
     }
 
-    _multiWrite(tags, values)
-    {
+    #multiWrite = (tags, values) => {
         let self = this;
         return new Promise((resolve, reject) => {
             // assert tags count and values count
@@ -286,27 +318,27 @@ module.exports = class S7Socket extends events{
         }); 
     }
 
-    _onConnect() {
+    #onConnect = () => {
         this.emit('connect');
     }
 
-    _onRead(results) {
+    #onRead = (results) => {
         this.emit('read', results);
     }
 
-    _onWrite(results) {
+    #onWrite = (results) => {
         this.emit('write', results);
     }
 
-    _onMultiRead(results) {
+    #onMultiRead = (results) => {
         this.emit('multiRead', results);
     }
 
-    _onMultiWrite(results) {
+    #onMultiWrite = (results) => {
         this.emit('multiWrite', results);
     }
 
-    _onError(error) {
+    #onError = (error) => {
         this.emit('error', error);
     }
 }
