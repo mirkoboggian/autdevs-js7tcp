@@ -85,7 +85,7 @@ module.exports = class S7Socket extends events{
         }   
     }
 
-    _connect() {
+    #_connect() {
         let self = this;
         return new Promise((resolve, reject) => {
             if (self._socket) {
@@ -137,7 +137,7 @@ module.exports = class S7Socket extends events{
         });                
     }    
 
-    _multiRead(tags)
+    #_multiRead(tags)
     {    
         let self = this;
         return new Promise((resolve, reject) => {
@@ -214,7 +214,7 @@ module.exports = class S7Socket extends events{
         }); 
     }
 
-    _multiWrite(tags, values)
+    #_multiWrite(tags, values)
     {
         let self = this;
         return new Promise((resolve, reject) => {
@@ -269,27 +269,27 @@ module.exports = class S7Socket extends events{
         }); 
     }
 
-    _onConnect() {
+    #_onConnect() {
         this.emit('connect');
     }
 
-    _onRead(results) {
+    #_onRead(results) {
         this.emit('read', results);
     }
 
-    _onWrite(results) {
+    #_onWrite(results) {
         this.emit('write', results);
     }
 
-    _onMultiRead(results) {
+    #_onMultiRead(results) {
         this.emit('multiRead', results);
     }
 
-    _onMultiWrite(results) {
+    #_onMultiWrite(results) {
         this.emit('multiWrite', results);
     }
 
-    _onError(error) {
+    #_onError(error) {
         this.emit('error', error);
     }
 }

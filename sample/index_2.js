@@ -1,4 +1,13 @@
-    #region Simple Write
+const S7Socket = require("./../s7socket");
+const S7Comm = require("./../s7comm");
+const S7Tag = require("./../s7tag");
+
+var s7socket = new S7Socket("192.168.1.91", 102, 0, 1, 5000, 30000, 5000);
+
+s7socket.on('connect', () => {
+    console.log("CONNECTED: ", s7socket.connected());
+
+    //#region Simple Write
 
     // Polling write
     setInterval(() => {
@@ -196,9 +205,9 @@
         let data = s7socket.write(tag, value);
     }, 50);
 
-    #endregion
+    //#endregion
 
-    #region Read
+    //#region Read
 
     // Polling read
     setInterval(() => {
@@ -206,9 +215,9 @@
         let data = s7socket.read(tag);
     }, 50);
 
-    #endregion
+    //#endregion
 
-    #region Multi Write
+    //#region Multi Write
 
     setInterval(() => {
         var db1dbw0 = S7Tag.fromPath("DB1.DBW0");
@@ -229,9 +238,9 @@
         var mrRequest = s7socket.multiWrite(items, values);
     }, 50);
 
-    #endregion
+    //#endregion
 
-    #region Multi Read
+    //#region Multi Read
 
     setInterval(() => {
         var db1dbw0 = S7Tag.fromPath("DB1.DBW0[10]");
@@ -246,8 +255,9 @@
         var mrRequest = s7socket.multiRead(items);
     }, 50);
 
-    #endregion
-
+    //#endregion
+        
+});
 
 s7socket.on('error', (error) => {
     console.error(error);
@@ -272,3 +282,5 @@ s7socket.on('multiWrite', (result) => {
         console.info("WRITE: ", r.Tag.path, (r.Value == 255));
     });
 });
+
+s7socket.connect();

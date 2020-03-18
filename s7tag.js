@@ -68,7 +68,7 @@ module.exports = class S7Tag extends events {
         }    
     }
 
-    getPath() {
+    #getPath() {
         let toRet = "";
         toRet += this.db ? "DB" + this.db + "." : "";
         toRet += this.areaCode;
@@ -79,28 +79,28 @@ module.exports = class S7Tag extends events {
         return toRet;
     }
 
-    getParameterArea() {
+    #getParameterArea() {
         let dti = s7comm.ParameterArea.Info[this.areaCode].index;
         return dti;
     }
 
-    getDataType() {
+    #getDataType() {
         if (this.bit) return s7comm.DataType.Bit;
         let dti = s7comm.DataType.Info[this.typeCode].index;
         return dti;
     }
 
-    getBitsSize() {
+    #getBitsSize() {
         let bitsSize = s7comm.DataType.Info[this.typeCode].size(this.array ? this.array : 1);
         return bitsSize;
     }
 
-    getBytesSize() {
+    #getBytesSize() {
         let bitsSize = this.getBitsSize();
         return bitsSize / 8;
     }
 
-    getDefault() {        
+    #getDefault() {        
         let dv = s7comm.DataType.Info[this.typeCode].default;
         return dv;
     }
