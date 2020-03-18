@@ -1,5 +1,5 @@
-# s7tcp
-**S7TCP** permette di comunicare in lettura/Scrittura con i dati di vari modelli dei PLC Siemens (S7300/400, S71200/1500)).
+# S7Tcp
+**S7TCP** permette di scambiare dati "non ottimizzati" in lettura/scrittura con alcuni modelli dei PLC Siemens (S7300/400, S71200/1500).
 Il progetto è stato creato e testato su MacOSX utilizzando Visual Studio Code.  
 Per questo motivo ho rilasciato nel Git anche la cartella _.vscode_ che può essere utile per i test di debug.
 
