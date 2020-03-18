@@ -26,8 +26,8 @@ Al momento il Driver è stato realizzato con queste caratteristiche:
 Ho cercato di uniformare la definizione dell'indirizzo assoluto (path) in modo che questo contenga tutte le informazioni necessarie (area, tipo, offset, bit, array). Ad esempio sono definizione valide (non CASE sensitive):
 * _DB10.DBR40[10]_: viene indirizzata l'area DB 10 a partire dall'offset 40 con un array di 10 Reali.
 * _DB10.DBS20[18]_: viene indirizzata l'area DB 10 a partire dall'offset 20 con una stringa di 18 Caratteri.
-* _DB10.DBB0.%5: viene indirizzato il bit 5 dell'area DB10 dell'offset 0.
-* _MC100[10]: viene indirizzata l'area M100 con un array di 10 caratteri.
+* _DB10.DBB0.%5_: viene indirizzato il bit 5 dell'area DB10 dell'offset 0.
+* _MC100[10]_: viene indirizzata l'area M100 con un array di 10 caratteri.
   
 Un tag è formato dalle seguenti proprietà:
 * DB: eventuale numero della DB
@@ -53,6 +53,7 @@ Da cui le seguenti regole:
 ## TODO
 * Letture/Scritture a Bit non ancora realizzate. Rispetto ai progetti _libnodave_ e _sharp7_ che usano un protocollo nativo per la lettura/scrittura dei _bit_ credo che implementerò questa parte mantenendo la lettura/scrittura a byte (più onerosa inq uanto richiede sempre una lettura prima di una scrittura).
 * TagPath: L'espressione regolare non è GARANTITA. Ci sono troppi sottocasi da valutare..
+* Eseguire più richeiste di lettura/scrittura per quei Tags o gruppi di Tags che superano i limiti in Bytes per ogni richiesta
 
 ## NOTE
 * Le letture/scritture Timer/Contatori non verranno mai testate/implementate.
