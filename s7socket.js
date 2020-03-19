@@ -3,7 +3,11 @@ const net = require('net');
 const events = require('events');
 var alock = require('async-lock');
 
-module.exports = class S7Socket extends events{
+/**
+ * S7Socket Class encapsulate a TCP socket to manage connection to device, read tags and write tags.
+ * The socket is protect from concurrent request by lock.
+ */
+class S7Socket extends events{
 
     /**
      * S7Socket constructor. This class manages connection/read and write operations using a TCP socket
@@ -342,3 +346,6 @@ module.exports = class S7Socket extends events{
         this.emit('error', error);
     }
 }
+
+
+module.exports = S7Socket;

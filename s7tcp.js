@@ -2,7 +2,11 @@ const S7Socket = require('./s7socket');
 const S7Tag = require('./s7tag');
 const events = require('events');
 
-module.exports = class S7Tcp extends events{
+/**
+ * S7Tcp is a server and it has the task of handling all read/write requests.
+ * It's a Gateway between clients (who needs data) and S7 Device (where data are).
+ */
+class S7Tcp extends events{
 
     /**
      * S7Tcp class constructor
@@ -84,3 +88,5 @@ module.exports = class S7Tcp extends events{
     }
 
 }
+
+module.exports = S7Tcp;

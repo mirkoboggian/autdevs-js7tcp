@@ -1,3 +1,11 @@
+/**
+ * This module provide the ISO-on-TCP requests as specified in protocol:
+ * - Connect to device via TCP socket (session and PDU negotiation)
+ * - Read (tags)
+ * - Write (tags, values)
+ */
+
+
 // Enums
 const CPUType = require("./enums/CPUType");
 const ErrorCode = require("./enums/ErrorCode");

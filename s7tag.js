@@ -1,7 +1,10 @@
 const s7comm = require("./s7comm");
 const events = require('events');
 
-module.exports = class S7Tag extends events {    
+/**
+ * S7Tag Class provide a safe mechanism to manage tags as S7 device needs.
+ */
+class S7Tag extends events {    
 
     /**
      * 
@@ -186,3 +189,5 @@ module.exports = class S7Tag extends events {
         return func(value);        
     }
 }
+
+module.exports = S7Tag;
