@@ -44,6 +44,21 @@ class S7Socket extends events{
     }
     
     /**
+     * Create a S7Socket instance using a config object
+     * @param {object} config object with parameters like {"ip":"192.168.1.1", "port":102, .. }
+     */
+    static fromConfig(config) {
+        try {
+            let s7socket = new S7Socket(config.ip, config.port, config.rack, 
+                config.slot, config.autoreconnect, config.timeout, config.rwTimeout);
+            return s7socket;
+        } catch(e) {
+            let err = new Error("This config is not a valid config for S7socket.", e.message);
+            throw err;
+        }
+    }
+
+    /**
      * Try to connect the Socket to CPU
      */
     async connect() {

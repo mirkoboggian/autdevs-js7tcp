@@ -27,13 +27,15 @@ var tasks = [];
 
 let config = {
     "name": "PLC",
-    "ip": "192.168.1.91",
-    "port" : 102,
-    "rack" : 0,
-    "slot" : 1,
-    "autoreconnect" : 10000,
-    "timeout" : 60000,
-    "rwTimeout" : 5000    
+    "socket": {
+        "ip": "192.168.1.91",
+        "port" : 102,
+        "rack" : 0,
+        "slot" : 1,
+        "autoreconnect" : 10000,
+        "timeout" : 60000,
+        "rwTimeout" : 5000    
+    }
 }
 var s7tcp = S7Tcp.fromConfig(config);
 

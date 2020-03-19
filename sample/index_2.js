@@ -201,7 +201,7 @@ s7socket.on('connect', () => {
                 6+now.getSeconds(), 7+now.getSeconds(), 8+now.getSeconds(), 9+now.getSeconds(), 10+now.getSeconds(),            
                 6+now.getSeconds(), 7+now.getSeconds()
             ];
-        let tag = S7Tag.fromPath("Db1.DbR0[233]");
+        let tag = S7Tag.fromPath("tag1", "Db1.DbR0[233]");
         let data = s7socket.write(tag, value);
     }, 50);
 
@@ -211,7 +211,7 @@ s7socket.on('connect', () => {
 
     // Polling read
     setInterval(() => {
-        let tag = S7Tag.fromPath("DB1.DBB0[942]");
+        let tag = S7Tag.fromPath("tag2", "DB1.DBB0[942]");
         let data = s7socket.read(tag);
     }, 50);
 
@@ -220,11 +220,11 @@ s7socket.on('connect', () => {
     //#region Multi Write
 
     setInterval(() => {
-        var db1dbw0 = S7Tag.fromPath("DB1.DBW0");
-        var db1dbw10 = S7Tag.fromPath("DB1.DBW10");
-        var db1dbw14 = S7Tag.fromPath("DB1.DBW14");
-        var db1dbw8 = S7Tag.fromPath("DB1.DBW8");
-        var db1dbw26 = S7Tag.fromPath("DB1.DBW26");
+        var db1dbw0 = S7Tag.fromPath("db1dbw0", "DB1.DBW0");
+        var db1dbw10 = S7Tag.fromPath("db1dbw10", "DB1.DBW10");
+        var db1dbw14 = S7Tag.fromPath("db1dbw14", "DB1.DBW14");
+        var db1dbw8 = S7Tag.fromPath("db1dbw8", "DB1.DBW8");
+        var db1dbw26 = S7Tag.fromPath("db1dbw26", "DB1.DBW26");
         var items = [db1dbw0, db1dbw10, db1dbw14, db1dbw8, db1dbw26];
         
         let now = new Date(Date.now());
@@ -243,14 +243,14 @@ s7socket.on('connect', () => {
     //#region Multi Read
 
     setInterval(() => {
-        var db1dbw0 = S7Tag.fromPath("DB1.DBW0[10]");
-        var db1dbw10 = S7Tag.fromPath("DB1.DBW10");
-        var db1dbw14 = S7Tag.fromPath("DB1.DBW14");
-        var db1dbb9 = S7Tag.fromPath("DB1.DBb100[11]");
-        var db1dbw8 = S7Tag.fromPath("DB1.DBW8");
-        var db1dbb8 = S7Tag.fromPath("DB1.DBb1008");
-        var db1dbb9 = S7Tag.fromPath("DB1.DBb229");
-        var db1dbw26 = S7Tag.fromPath("DB1.DBW126");        
+        var db1dbw0 = S7Tag.fromPath("db1dbw0", "DB1.DBW0[10]");
+        var db1dbw10 = S7Tag.fromPath("db1dbw10", "DB1.DBW10");
+        var db1dbw14 = S7Tag.fromPath("db1dbw14", "DB1.DBW14");
+        var db1dbb9 = S7Tag.fromPath("db1dbb9", "DB1.DBb100[11]");
+        var db1dbw8 = S7Tag.fromPath("db1dbw8", "DB1.DBW8");
+        var db1dbb8 = S7Tag.fromPath("db1dbb8", "DB1.DBb1008");
+        var db1dbb9 = S7Tag.fromPath("db1dbb9", "DB1.DBb229");
+        var db1dbw26 = S7Tag.fromPath("db1dbw26", "DB1.DBW126");        
         var items = [db1dbw0, db1dbw10, db1dbw14, db1dbw8, db1dbw26, db1dbb8, db1dbb9];
         var mrRequest = s7socket.multiRead(items);
     }, 50);

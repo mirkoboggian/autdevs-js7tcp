@@ -15,8 +15,9 @@ class S7Tag extends events {
      * @param {number} bit The bit number: only if typeCode is B (byte) and the tag is a Bit
      * @param {number} array The array size or string length: cannot be used when type is Bit
      */
-    constructor(db, areaCode, typeCode, offset, bit, array) {
+    constructor(symbol, db, areaCode, typeCode, offset, bit, array) {
         super(); 
+        this.symbol = symbol;
         this.db = db ? parseInt(db) : null;
         this.areaCode = areaCode ? areaCode.toUpperCase() : areaCode;
         this.typeCode = typeCode ? typeCode.toUpperCase() : typeCode;
@@ -68,7 +69,7 @@ class S7Tag extends events {
      * @param {string} path the well formatted S7Tag's path
      * @returns S7Tag
      */
-    static fromPath(path) {
+    static fromPath(symbol, path) {
         let re_db = "(db(?<db>[0-9]+).)?";
         let re_area = "(?<area>db{1}|m{1}|e{1}|a{1}){1}";
         let re_type = "(?<type>b{1}|c{1}|w{1}|i{1}|r{1}|s{1}|ub{1}|ui{1}|dw{1}|di{1}|ud{1}){1}";
@@ -81,10 +82,24 @@ class S7Tag extends events {
         let match = path.match(re_db_area_type_offset);
         if (match) {
             let groups = match.groups;
-            return new S7Tag(groups.db, groups.area, groups.type, groups.offset, groups.bit, groups.array);
+            return new S7Tag(symbol, groups.db, groups.area, groups.type, groups.offset, groups.bit, groups.array);
         } else {
-            return new S7Tag();
+            return new S7Tag(symbol);
         }    
+    }
+
+    /**
+     * Create a S7Tag instance using a config object
+     * @param {object} config object with parameters like {"symbol":"Tag1", "path":"DB1.DBW10", .. }
+     */
+    static fromConfig(config) {
+        try {
+            let s7Tag = S7tag.fromPath(config.symbol, config.path);
+            return s7Tag;
+        } catch(e) {
+            let err = new Error("This config is not a valid config for S7tag.", e.message);
+            throw err;
+        }
     }
 
     /**

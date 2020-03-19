@@ -19,20 +19,12 @@ class S7Tcp extends events{
      * @param {number} timeout milliseconds of socket inactivity before close
      * @param {number} rwTimeout milliseconds of waiting before acquire socket's lock for read/write operations
      */
-    constructor(name, ip = "127.0.0.1", port = 102, rack = 0, slot = 2, 
-                autoreconnect = 10000, timeout = 60000, rwTimeout = 5000) {  
+    constructor(name, s7socket) {  
         super();   
         // properties     
-        this.name = name;
-        this.ip = ip;
-        this.port = port;
-        this.rack = rack;
-        this.slot = slot;
-        this.autoreconnect = autoreconnect;
-        this.timeout = timeout;
-        this.rwTimeout = rwTimeout; 
+        this.name = name;      
         // internal
-        this.socket = new S7Socket(this.ip, this.port, this.rack, this.slot, this.autoreconnect, this.timeout, this.rwTimeout);
+        this.socket = s7socket;
         this.socket.on('connect', () => this.#onConnect());
         this.socket.on('read', (result) => this.#onRead(result));
         this.socket.on('write', (result) => this.#onWrite(result));
@@ -43,13 +35,15 @@ class S7Tcp extends events{
 
     /**
      * Create a S7Tcp instance using a config object
-     * @param {object} config object with parameters like {name: "s7tcp", ip:"192.168.1.1", .. }
+     * @param {object} config object with parameters like {"name": "s7tcp", "socket": {ip:"192.168.1.1", .. } }
      */
     static fromConfig(config) {
         try {
-            let plc = new S7Tcp(config.name, config.ip, config.port, config.rack, 
-                config.slot, config.autoreconnect, config.timeout, config.rwTimeout);
-            return plc;
+            // socket
+            let configSocket = config.socket;
+            let s7socket = S7Socket.fromConfig(configSocket);
+            // server (complete)
+            return new S7Tcp(config.name, s7socket);
         } catch(e) {
             let err = new Error("This config is not a valid config for S7Tcp.", e.message);
             throw err;

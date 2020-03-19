@@ -7,13 +7,13 @@ var s7socket = new S7Socket("192.168.1.91", 102, 0, 1, 5000, 30000, 5000);
 s7socket.on('connect', () => {
     console.log("CONNECTED: ", s7socket.connected());
 
-    let Db1DbR0 = S7Tag.fromPath("DB1.DBR3600");
+    let Db1DbR0 = S7Tag.fromPath("Db1DbR0", "DB1.DBR3600");
     let Db1DbR0_val = Db1DbR0.toBytes(445.99);
 
-    let Db1DbS1 = S7Tag.fromPath("DB1.DBS3604[20]");
+    let Db1DbS1 = S7Tag.fromPath("Db1DbS1", "DB1.DBS3604[20]");
     let Db1DbS1_val = Db1DbS1.toBytes("CIAO!");
 
-    let Db1DbI3628 = S7Tag.fromPath("DB1.DBI3628[10]");
+    let Db1DbI3628 = S7Tag.fromPath("Db1DbI3628", "DB1.DBI3628[10]");
     let Db1DbI3628_val = Db1DbI3628.toBytes([13,23,31,43,51,63,7,8,9,10]);
     
     let tags = [Db1DbR0, Db1DbS1, Db1DbI3628];
