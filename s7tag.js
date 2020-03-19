@@ -94,7 +94,7 @@ class S7Tag extends events {
      */
     static fromConfig(config) {
         try {
-            let s7Tag = S7tag.fromPath(config.symbol, config.path);
+            let s7Tag = S7Tag.fromPath(config.symbol, config.path);
             return s7Tag;
         } catch(e) {
             let err = new Error("This config is not a valid config for S7tag.", e.message);

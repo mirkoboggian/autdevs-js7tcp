@@ -22,5 +22,17 @@
             "name": "sample3",
             "program": "${workspaceFolder}/sample/index_3.js"
         },
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "sample4",
+            "program": "${workspaceFolder}/sample/index_4.js"
+        },
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "removeListener",
+            "program": "${workspaceFolder}/sample/removeListener.js"
+        },
     ]
 }

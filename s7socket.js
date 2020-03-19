@@ -111,7 +111,7 @@ class S7Socket extends events{
             }).then((result) => {
                 this.#onWrite(result[0]);
             }).catch((err) => {                
-                this.#onError(err); 
+                this.#onError(err);
             });
         }        
     }
@@ -163,7 +163,11 @@ class S7Socket extends events{
                 self._socket.destroy();
             }                    
             self._socket = new net.Socket();
-            self._socket.on('error', (error) => { self.#onError(error); return; });
+            self._socket.once('error', (e) => { 
+                self.#onError(events); 
+                reject(e);
+                return; 
+            });
             self._socket.setTimeout(self.timeout);
             self._socket.setKeepAlive(true, self.timeout); 
             self._socket.connect(self.port, self.ip, () => {
@@ -224,26 +228,35 @@ class S7Socket extends events{
                 return;
             }
             let request = Uint8Array.from(s7comm.ReadRequest(tags));
+            // ATT! important to register on socket error too!
+            // If n error on socket occour the lock is never release
+            // To avoid too many listener Error remove it before return promise
+            var onSocketError = (e) => { reject(e); return; };
+            self._socket.on('error', onSocketError);
             let result = self._socket.write(request, (e) => {
                 if (e) { 
+                    self._socket.removeListener('error', onSocketError);
                     reject(e);
                     return;
                 };
                 self._socket.once('data', buffer => {
                     // assert ISO length
                     if (buffer.length < 22) {
+                        self._socket.off('error', onSocketError);
                         let e = new Error("Error on data bytes read response!");
                         reject(e);
                         return;  
                     } 
                     // assert Operation result
                     if (buffer[17] != 0 || buffer[18] != 0) {
+                        self._socket.off('error', onSocketError);
                         let e = new Error("Read response return an error: " + buffer[17] + "/" + buffer[18]);
                         reject(e);
                         return;  
                     } 
                     // assert Items Count
                     if (buffer[20] != tags.length || buffer[20] > s7comm.MAXITEMSLIST) {
+                        self._socket.off('error', onSocketError);
                         let e = new Error("Read response return invalid items count");
                         reject(e);
                         return;  
@@ -275,7 +288,8 @@ class S7Socket extends events{
                         let tagValue = tagResponse.slice(4, 4 + tag.bytesSize);
                         results.push({Tag: tag, Value: Uint8Array.from(tagValue)});
                         offset += normalizeByteSize + 4;
-                    });            
+                    });
+                    self._socket.off('error', onSocketError); 
                     resolve(results);
                     return;
                 });                
@@ -306,20 +320,31 @@ class S7Socket extends events{
                 return;
             }
             let request = Uint8Array.from(s7comm.WriteRequest(tags, values));
+            // ATT: Important to register on socket error too!
+            // If n error on socket occour the lock is never release
+            // To avoid too many listener Error remove it before return promise
+            let onSocketError = (e) => {
+                reject(e);
+                return; 
+            };
+            self._socket.once('error', onSocketError);
             let result = self._socket.write(request, (e) => {
                 if (e) { 
+                    self._socket.off('error', onSocketError);
                     reject(e);
                     return;
                 };                
                 self._socket.once('data', buffer => {
                     // assert Operation result
                     if (buffer[17] != 0 || buffer[18] != 0) {
+                        self._socket.off('error', onSocketError);
                         let e = new Error("Write response return an error: " + buffer[17] + "/" + buffer[18]);
                         reject(e);
                         return;  
                     } 
                     // assert Items Count
                     if (buffer[20] != tags.length || buffer[20] > s7comm.MAXITEMSLIST) {
+                        self._socket.off('error', onSocketError);
                         let e = new Error("Write response return invalid items count");
                         reject(e);
                         return;  
@@ -330,6 +355,7 @@ class S7Socket extends events{
                         results.push({Tag: tag, Value: buffer[offset]});
                         offset += 1;
                     });
+                    self._socket.off('error', onSocketError);
                     resolve(results);
                     return;
                 });
@@ -359,6 +385,7 @@ class S7Socket extends events{
 
     #onError = (error) => {
         this.emit('error', error);
+        this._socket.destroy();
     }
 }
 
