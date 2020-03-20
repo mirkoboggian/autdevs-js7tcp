@@ -28,7 +28,8 @@ class S7Socket extends events{
         this.autoreconnect = autoreconnect;
         this.timeout = timeout;
         this.rwTimeout = rwTimeout;
-        this.lock = new alock({timeout: this.rwTimeout});
+
+        this.lock = new alock({timeout: this.rwTimeout, maxPending: 20});
 
         // internal use
         this.connecting = false;
@@ -526,9 +527,11 @@ class S7Socket extends events{
         this.emit('multiWrite', results);
     }
 
-    #onError = (error) => {
-        this.emit('error', error);
+    #onError = (error) => {        
+        // this.lock = new alock({timeout: this.rwTimeout, maxPending: 20});
         this._socket.destroy();
+        this.connecting = false;
+        this.emit('error', error);
     }
 }
 

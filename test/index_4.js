@@ -1,53 +1,47 @@
-const fs = require('fs');
 const S7Tcp = require("./../s7tcp");
+const S7Socket = require("./../s7socket");
 const S7Tag = require("./../s7tag");
 
-//#region S7Tcp
-
-let plcConfig = {
-    "name": "PLC",
-    "socket": {
-        "ip": "192.168.1.91",
-        "port" : 102,
-        "rack" : 0,
-        "slot" : 1,
-        "autoreconnect" : 10000,
-        "timeout" : 60000,
-        "rwTimeout" : 5000    
-    }
-}
-var s7tcp = S7Tcp.fromConfig(plcConfig);
-let tag1 = S7Tag.fromConfig({ "symbol": "tag1",  "path": "DB1.DBW0"       });
-let val1 = 123;
-
-//let tag2 = S7Tag.fromConfig({ "symbol": "tag2",  "path": "DB1.DBW2[4]"    });
-//let tag3 = S7Tag.fromConfig({ "symbol": "tag3",  "path": "DB1.DBS10[8]"   });
-//let tags = [tag1, tag2, tag3];
-//let values = [123, [1, 2, 3, 4], "CIAO"];
-
-// register to s7tcp events
+let writeInterval = null;
 let readInterval = null;
-let writeIntervall = null;
+var s7tcp = S7Tcp.fromConfig({
+        "name": "S7Tcp",
+        "socket": {
+            "ip": "192.168.1.91",
+            "port": 102,
+            "rack": 0,
+            "slot": 1,
+            "autoreconnect": 5000,
+            "timeout": 30000,
+            "rwTimeout": 0
+        }
+    });
 s7tcp.on('connect', () => {
-    let isConnected = s7tcp.connected();
-    console.log("CONNECTED: ", isConnected);
-    
-    readInterval = setInterval(() => {
-         s7tcp.socket.read(tag1);
-    }, 1000);    
-    
-    writeIntervall = setInterval(() => {
-        s7tcp.socket.write(tag1, val1);
-    }, 1000);
+    console.log("CONNECTED: ", s7tcp.socket.connected());
 
-    //s7tcp.socket.multiWrite(tags, values);
-    //s7tcp.socket.multiRead(tags);
+    let Db1DbR0 = S7Tag.fromConfig({"symbol": "tag1", "path": "DB1.DBW0"});
+    let Db1DbR0_val = Db1DbR0.toBytes(445.99886);
+
+    writeInterval = setInterval(() => {        
+        s7tcp.socket.write(Db1DbR0, Db1DbR0_val);
+    }, 200);
+
+    readInterval = setInterval(() => {
+        s7tcp.socket.read(Db1DbR0);
+    }, 200);
+
 });
 
-s7tcp.on('error', (error) => {
+s7tcp.on('error', (error) => {    
     console.error(error);
-    clearInterval(readInterval);
-    clearInterval(writeIntervall);
+    if (writeInterval) {
+        clearInterval(writeInterval);
+        writeInterval = false;
+    }
+    if (readInterval) {
+        clearInterval(readInterval);
+        readInterval = false;
+    }
 });
 
 s7tcp.on('read', (result) => {
@@ -60,7 +54,7 @@ s7tcp.on('write', (result) => {
 
 s7tcp.on('multiRead', (result) => {
     result.forEach((r) => {
-        console.info("READ: ", r.Tag.path, r.Value);
+        console.info("READ: ", r.Tag.path, r.Tag.fromBytes(r.Value));
     });
 });
 
@@ -70,4 +64,4 @@ s7tcp.on('multiWrite', (result) => {
     });
 });
 
-//#endregion
+s7tcp.socket.connect();
