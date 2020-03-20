@@ -8,31 +8,25 @@
             "type": "node",
             "request": "launch",
             "name": "sample1",
-            "program": "${workspaceFolder}/sample/index_1.js",
+            "program": "${workspaceFolder}/test/index_1.js",
         },
         {
             "type": "node",
             "request": "launch",
             "name": "sample2",
-            "program": "${workspaceFolder}/sample/index_2.js"
+            "program": "${workspaceFolder}/test/index_2.js"
         },
         {
             "type": "node",
             "request": "launch",
             "name": "sample3",
-            "program": "${workspaceFolder}/sample/index_3.js"
+            "program": "${workspaceFolder}/test/index_3.js"
         },
         {
             "type": "node",
             "request": "launch",
             "name": "sample4",
-            "program": "${workspaceFolder}/sample/index_4.js"
-        },
-        {
-            "type": "node",
-            "request": "launch",
-            "name": "removeListener",
-            "program": "${workspaceFolder}/sample/removeListener.js"
-        },
+            "program": "${workspaceFolder}/test/index_4.js"
+        }
     ]
 }
