@@ -169,7 +169,7 @@ class S7Tag extends events {
      * @returns {object} The value conversion
      */
     fromBytes(bytes) {
-        let func = s7comm.DataType.Info[this.typeCode].fromBytes;        
+        let func = s7comm.DataType.Info[this.typeCode].fromBytes;
         if(this.typeCode=="S") return func(bytes);
         if (this.array) {
             let ret = [];

@@ -76,7 +76,7 @@ const BytesToChar = (array) => {
 };
 const BytesToWord = (array) => {
   let buf = Buffer.from(array);
-  let ret = buf.readInt16BE().toString(16);
+  let ret = buf.readInt16BE();
   return ret;
 };
 const BytesToInt = (array) => {
@@ -91,7 +91,7 @@ const BytesToUInt = (array) => {
 };
 const BytesToDWord = (array) => {
   let buf = Buffer.from(array);
-  let ret = buf.readInt32BE().toString(16);
+  let ret = buf.readInt32BE();
   return ret;
 };
 const BytesToDInt = (array) => {

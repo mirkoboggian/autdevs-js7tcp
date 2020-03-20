@@ -65,8 +65,10 @@ class S7Socket extends events{
         this.connecting = true;
         this.#connect().then(() => {
             this.connecting = false;
+            this.#onConnect();
         }).catch((e) => {
             this.connecting = false;
+            this.#onError(e);
         });        
     }
 
@@ -152,214 +154,355 @@ class S7Socket extends events{
             }).catch((err) => {
                 this.#onError(err); 
             });
-        }   
+        }
     }
 
-    #connect = () => {
+    /**
+     * This function send a message to socket and return the response.
+     * @param {Array} sendMessage Array of bytes to send through the socket
+     * @returns {Promise} Response as Array of bytes or Reject as Error
+     */
+    #socketSendReceive = (sendMessage) => {
         let self = this;
         return new Promise((resolve, reject) => {
+            // check socket status
+            if (!self.connected()) {
+                let e = new Error("Socket not connected");
+                reject(e);
+            }
+            let onData = (buffer) => {
+                self._socket.off("error", onError);
+                resolve(buffer);
+            }
+            let onError = (e) => {
+                self._socket.off("data", onData);
+                reject(e);                
+            }
+            self._socket.once("error", onError);
+            self._socket.once("data", onData);
+            self._socket.write(sendMessage, (e) => {
+                // write done, check for errors
+                if (e != null) {
+                    reject(e);
+                }
+            })
+        });
+    }
+
+    /**
+     * This function try to open the socket communication.
+     * @returns {Promise} Response as readyState or Reject as Error
+     */
+    #openSocket = () => {
+        let self = this;
+        return new Promise((resolve, reject) => {
+            // if socket already exists destroy it
             if (self._socket) {
                 self._socket.removeAllListeners();
                 self._socket.destroy();
-            }                    
+            } 
+            // new socket instance
             self._socket = new net.Socket();
-            self._socket.once('error', (e) => { 
-                self.#onError(events); 
-                reject(e);
-                return; 
-            });
             self._socket.setTimeout(self.timeout);
             self._socket.setKeepAlive(true, self.timeout); 
-            self._socket.connect(self.port, self.ip, () => {
-                let request = Uint8Array.from(s7comm.RegisterSessionRequest(self.rack, self.slot));
-                let result = self._socket.write(request, (e) => {
-                    if (e) {
-                        self.#onError(e);
-                        reject(e);
-                        return;
-                    };
-                    self._socket.once('data', buffer => {                    
-                        let response = Uint8Array.from(buffer);
-                        if (response.length != 22) {
-                            let e = new Error("Error registering session!");
-                            self.#onError(e); 
-                            reject(e);
-                            return;
-                        }
-                        let request = Uint8Array.from(s7comm.NegotiatePDULengthRequest());
-                        let result = self._socket.write(request, (e) => {
-                            if (e) { 
-                                self.#onError(e); 
-                                reject(e);
-                                return;
-                            };
-                            self._socket.once('data', buffer => {
-                                let response = Uint8Array.from(buffer);
-                                if (response.length != 27) {
-                                    let e = new Error("Error negotiating PDU!");
-                                    self.#onError(e);
-                                    reject(e);
-                                    return;
-                                }
-                                self.#onConnect();
-                                resolve(true);
-                            });
-                        });
-                    });                
-                });
-            });  
-        });                
-    }    
+            let onceSocketError = (e) => { 
+                reject(e); 
+            }
+            let onSocketConnect = () => {
+                self._socket.off('error', onceSocketError);
+                resolve(self._socket.readyState);
+            }
+            self._socket.once('error', onceSocketError);
+            self._socket.connect(self.port, self.ip, onSocketConnect);
+        });
+    }
 
-    #multiRead = (tags) => {    
+    /**
+     * This function try to register session to device
+     * @returns {Promise} Response as true or Reject as Error
+     */
+    #registerSession = () => {
+        let self = this;
+        return new Promise(async (resolve, reject) => {
+            let request = Uint8Array.from(s7comm.RegisterSessionRequest(self.rack, self.slot));
+            try {
+                let registerSessionResponse = await self.#socketSendReceive(request);
+                let response = Uint8Array.from(registerSessionResponse);
+                if (response.length != 22) {
+                    let e = new Error("Error registering session!");
+                    reject(e);
+                }
+                resolve(true);
+            } catch (e) {
+                reject(e);
+            }
+        });
+    }
+
+    /**
+     * This function try to negotiate PDU with device
+     * @returns {Promise} Response as true or Reject as Error
+     */
+    #NegotiatePDULength = () => {
+        let self = this;
+        return new Promise(async (resolve, reject) => {
+            let request = Uint8Array.from(s7comm.NegotiatePDULengthRequest());
+            try {
+                let negotiatePDULengthResponse = await self.#socketSendReceive(request);
+                let response = Uint8Array.from(negotiatePDULengthResponse);
+                if (response.length != 27) {
+                    let e = new Error("Error negotiating PDU!");
+                    reject(e);
+                }
+                resolve(true);
+            } catch (e) {
+                reject(e);
+            }
+        });
+    }
+
+    /**
+     * This function try to connect, register session and negotiate PDU with device
+     * @returns {Promise} Response as true or Reject as Error
+     */
+    #connect = () => {
+        let self = this;
+        return new Promise(async (resolve, reject) => {
+            try {
+                await self.#openSocket();
+                await self.#registerSession();
+                await self.#NegotiatePDULength();
+                resolve(true);
+            } catch (e) {
+                reject(e);
+            }
+        });
+    }
+
+    /**
+     * This function validates the tags for Read Requests
+     * @param {Array} tags Array of S7tag
+     * @returns {Promise} Response as true or Reject as Error
+     */
+    #multiReadAssertInput = (tags) => {
         let self = this;
         return new Promise((resolve, reject) => {
             // assert s7comm.MAXITEMSLIST
             if (tags.length > s7comm.MAXITEMSLIST) {
                 let e = new Error("Tags count is greater than Maximum (" + s7comm.MAXITEMSLIST + ")");
                 reject(e);
-                return;
             }
             // assert s7comm.MAXREADBYTES
             let totalLength = tags.reduce((total, item) => total + (item['bytesSize'] || 0), 0);
             if (totalLength > s7comm.MAXREADBYTES) {
                 let e = new Error("Tags total length is greater than Maximum (" + s7comm.MAXREADBYTES + ")");
                 reject(e);
-                return;
             }
+            // all goods
+            resolve(true);
+        })
+    }
+
+    /**
+     * This function send a data read request
+     * @param {Array} tags Array of S7tag
+     * @returns {Promise} Response as array of bytes or Reject as Error
+     */
+    #multiReadSendRequest = (tags) => {
+        let self = this;
+        return new Promise(async (resolve, reject) => {
             let request = Uint8Array.from(s7comm.ReadRequest(tags));
             // ATT! important to register on socket error too!
             // If n error on socket occour the lock is never release
             // To avoid too many listener Error remove it before return promise
-            var onSocketError = (e) => { reject(e); return; };
-            self._socket.on('error', onSocketError);
-            let result = self._socket.write(request, (e) => {
-                if (e) { 
-                    self._socket.removeListener('error', onSocketError);
-                    reject(e);
-                    return;
-                };
-                self._socket.once('data', buffer => {
-                    // assert ISO length
-                    if (buffer.length < 22) {
-                        self._socket.off('error', onSocketError);
-                        let e = new Error("Error on data bytes read response!");
-                        reject(e);
-                        return;  
-                    } 
-                    // assert Operation result
-                    if (buffer[17] != 0 || buffer[18] != 0) {
-                        self._socket.off('error', onSocketError);
-                        let e = new Error("Read response return an error: " + buffer[17] + "/" + buffer[18]);
-                        reject(e);
-                        return;  
-                    } 
-                    // assert Items Count
-                    if (buffer[20] != tags.length || buffer[20] > s7comm.MAXITEMSLIST) {
-                        self._socket.off('error', onSocketError);
-                        let e = new Error("Read response return invalid items count");
-                        reject(e);
-                        return;  
-                    }
-                    let results = [];
-                    let offset = 21;
-                    tags.forEach((tag) => {
-                        let normalizeByteSize = tag.bytesSize%2 ? (tag.bytesSize+1) : tag.bytesSize;
-                        let tagResponse = buffer.slice(offset, offset + normalizeByteSize + 4);
-                        // assert tag result
-                        if (tagResponse[0] != 0xFF) {
-                            // Error on read.
-                            // add a null in tag value response
-                            results.push({Tag: tag, Value: null});
-                            return;
-                        }
-                        // ATT: in tagResponse[1] there is the DataType to know how to manage the SIZE.
-                        // I supposed to read only bytes > the SIZE is in bits
-                        let itemBitsLength = tagResponse[2] * 256 + tagResponse[3];
-                        let itemBytesLength = itemBitsLength / 8;
-                        // assert tag result bytes length
-                        if (itemBytesLength != tag.bytesSize) {
-                            // Error reading tag bytes size
-                            // add a null in tag value response
-                            results.push({Tag: tag, Value: null});
-                            return;
-                        }
-                        // takes value
-                        let tagValue = tagResponse.slice(4, 4 + tag.bytesSize);
-                        results.push({Tag: tag, Value: Uint8Array.from(tagValue)});
-                        offset += normalizeByteSize + 4;
-                    });
-                    self._socket.off('error', onSocketError); 
-                    resolve(results);
-                    return;
-                });                
-            });            
+            let onceSocketError = (e) => { reject(e); }
+            self._socket.once('error', onceSocketError);
+            try {
+                let readRequestResponse = await self.#socketSendReceive(request);                
+                self._socket.off('error', onceSocketError);
+                resolve(readRequestResponse);
+            } catch (e) {
+                self._socket.off('error', onceSocketError);
+                reject(e);
+            }
+        })
+    }
+
+    /**
+     * This function capture data after a read request
+     * @param {Array} tags Array of S7tag
+     * @param {Array} data Array of byte
+     * @returns {Promise} Response as array {S7tag, Array of bytes) or Reject as Error
+     */
+    #multiReadSendResponse = (tags, data) => {
+        let self = this;
+        return new Promise((resolve, reject) => {
+            // assert ISO length
+            if (data.length < 22) {
+                let e = new Error("Error on data bytes read response!");
+                reject(e);
+            } 
+            // assert Operation result
+            if (data[17] != 0 || data[18] != 0) {
+                let e = new Error("Read response return an error: " + data[17] + "/" + data[18]);
+                reject(e);
+            } 
+            // assert Items Count
+            if (data[20] != tags.length || data[20] > s7comm.MAXITEMSLIST) {
+                let e = new Error("Read response return invalid items count");
+                reject(e);
+            }
+            // Read data result
+            let results = [];
+            let offset = 21;
+            tags.forEach((tag) => {
+                let normalizeByteSize = tag.bytesSize%2 ? (tag.bytesSize+1) : tag.bytesSize;
+                let tagResponse = data.slice(offset, offset + normalizeByteSize + 4);
+                // assert tag result
+                if (tagResponse[0] != 0xFF) {
+                    // Error on read.
+                    // add a null in tag value response
+                    results.push({Tag: tag, Value: null});
+                }
+                // ATT: in tagResponse[1] there is the DataType to know how to manage the SIZE.
+                // I supposed to read only bytes > the SIZE is in bits
+                let itemBitsLength = tagResponse[2] * 256 + tagResponse[3];
+                let itemBytesLength = itemBitsLength / 8;
+                // assert tag result bytes length
+                if (itemBytesLength != tag.bytesSize) {
+                    // Error reading tag bytes size
+                    // add a null in tag value response
+                    results.push({Tag: tag, Value: null});
+                }
+                // takes value
+                let tagValue = tagResponse.slice(4, 4 + tag.bytesSize);
+                results.push({Tag: tag, Value: Uint8Array.from(tagValue)});
+                offset += normalizeByteSize + 4;
+            });
+            resolve(results);
+        })
+    }
+
+    /**
+     * This function send a data read request and return data in Raw format
+     * @param {Array} tags Array of S7tag
+     * @returns {Promise} Response as array {S7tag, value) or Reject as Error
+     */
+    #multiRead = (tags) => {    
+        let self = this;
+        return new Promise(async (resolve, reject) => {
+            try {
+                let multiReadAssert = await self.#multiReadAssertInput(tags);
+                let dataRead = await self.#multiReadSendRequest(tags);
+                let result = await self.#multiReadSendResponse(tags, dataRead);
+                resolve(result);
+            } catch (e) {
+                reject(e);
+            }
         }); 
     }
 
-    #multiWrite = (tags, values) => {
+    /**
+     * This function validates the tags/values for Write Requests
+     * @param {Array} tags Array of S7tag
+     * @param {Array} values Array of Array of byte
+     * @returns {Promise} Response as true or Reject as Error
+     */
+    #multiWriteAssertInput = (tags, values) => {
         let self = this;
         return new Promise((resolve, reject) => {
             // assert tags count and values count
             if (tags.length != values.length) {
                 let e = new Error("Tags count (" + tags.length + ") different from values count (" + values.length + ")");
                 reject(e);
-                return;
             }
             // assert s7comm.MAXITEMSLIST
             if (tags.length > s7comm.MAXITEMSLIST) {
                 let e = new Error("Tags count is greater than Maximum (" + s7comm.MAXITEMSLIST + ")");
                 reject(e);
-                return;
             }
             // assert s7comm.MAXWRITEBYTES
             let totalLength = tags.reduce((total, item) => total + (item['bytesSize'] || 0), 0);
             if (totalLength > s7comm.MAXWRITEBYTES) {
                 let e = new Error("Tags total length is greater than Maximum (" + s7comm.MAXWRITEBYTES + ")");
                 reject(e);
-                return;
             }
+            resolve(true);
+        })
+    }
+
+    /**
+     * This function send a data write request
+     * @param {Array} tags Array of S7tag
+     * @param {Array} values Array of Array of byte
+     * @returns {Promise} Response as true or Reject as Error
+     */
+    #multiWriteSendRequest = (tags, values) => {
+        let self = this;
+        return new Promise(async (resolve, reject) => {
             let request = Uint8Array.from(s7comm.WriteRequest(tags, values));
-            // ATT: Important to register on socket error too!
+            // ATT! important to register on socket error too!
             // If n error on socket occour the lock is never release
             // To avoid too many listener Error remove it before return promise
-            let onSocketError = (e) => {
+            let onceSocketError = (e) => { reject(e); }
+            self._socket.once('error', onceSocketError);
+            try {
+                let writeRequestResponse = await self.#socketSendReceive(request);                
+                self._socket.off('error', onceSocketError);
+                resolve(writeRequestResponse);
+            } catch (e) {
+                self._socket.off('error', onceSocketError);
                 reject(e);
-                return; 
-            };
-            self._socket.once('error', onSocketError);
-            let result = self._socket.write(request, (e) => {
-                if (e) { 
-                    self._socket.off('error', onSocketError);
-                    reject(e);
-                    return;
-                };                
-                self._socket.once('data', buffer => {
-                    // assert Operation result
-                    if (buffer[17] != 0 || buffer[18] != 0) {
-                        self._socket.off('error', onSocketError);
-                        let e = new Error("Write response return an error: " + buffer[17] + "/" + buffer[18]);
-                        reject(e);
-                        return;  
-                    } 
-                    // assert Items Count
-                    if (buffer[20] != tags.length || buffer[20] > s7comm.MAXITEMSLIST) {
-                        self._socket.off('error', onSocketError);
-                        let e = new Error("Write response return invalid items count");
-                        reject(e);
-                        return;  
-                    } 
-                    let results = [];
-                    let offset = 21;
-                    tags.forEach((tag) => {
-                        results.push({Tag: tag, Value: buffer[offset]});
-                        offset += 1;
-                    });
-                    self._socket.off('error', onSocketError);
-                    resolve(results);
-                    return;
-                });
+            }
+        })
+    }
+
+    /**
+     * This function capture data after a read request
+     * @param {Array} tags Array of S7tag
+     * @param {Array} data Array of byte
+     * @returns {Promise} Response as array {S7tag, Byte) or Reject as Error
+     */
+    #multiWriteSendResponse = (tags, data) => {
+        let self = this;
+        return new Promise((resolve, reject) => {
+            // assert Operation result
+            if (data[17] != 0 || data[18] != 0) {
+                let e = new Error("Write response return an error: " + data[17] + "/" + data[18]);
+                reject(e);
+            } 
+            // assert Items Count
+            if (data[20] != tags.length || data[20] > s7comm.MAXITEMSLIST) {
+                let e = new Error("Write response return invalid items count");
+                reject(e);
+            } 
+            let results = [];
+            let offset = 21;
+            tags.forEach((tag) => {
+                results.push({Tag: tag, Value: data[offset]});
+                offset += 1;
             });
+            resolve(results);
+        })
+    }
+
+    /**
+     * This function capture data after a read request
+     * @param {Array} tags Array of S7tag
+     * @param {Array} values Array of Array of byte
+     * @returns {Promise} Response as array {S7tag, Byte) or Reject as Error
+     */
+    #multiWrite = (tags, values) => {
+        let self = this;
+        return new Promise(async (resolve, reject) => {
+            try {
+                let multiReadAssert = await self.#multiWriteAssertInput(tags, values);
+                let dataRead = await self.#multiWriteSendRequest(tags, values);
+                let result = await self.#multiWriteSendResponse(tags, dataRead);
+                resolve(result);
+            } catch (e) {
+                reject(e);
+            }
         }); 
     }
 
