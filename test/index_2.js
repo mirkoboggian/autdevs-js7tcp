@@ -26,7 +26,7 @@ s7socket.on('connect', () => {
             [9+now.getSeconds(), 10+now.getSeconds()]
         ];   
         var mrRequest = s7socket.write(items, values);
-    }, 50);
+    }, 10);
 
     //#endregion
 
@@ -43,7 +43,7 @@ s7socket.on('connect', () => {
         var db1dbw26 = S7Tag.fromPath("db1dbw26", "DB1.DBW126");        
         var items = [db1dbw0, db1dbw10, db1dbw14, db1dbw8, db1dbw26, db1dbb8, db1dbb9];
         var mrRequest = s7socket.read(items);
-    }, 50);
+    }, 10);
 
     //#endregion
         

@@ -78,6 +78,19 @@ exports.RegisterSessionRequest = (rack, slot) => {
 }
 
 /**
+ * Validate and compute the "register session request" response from CPU
+ * @param {Array} response Array of byte, the response on "register session request"
+ * @returns {Boolean} Response as true or throw as Error
+ */
+exports.RegisterSessionResponse = (response) => {
+    if (response.length != 22) {
+        let e = new Error("Error registering session!");
+        throw e;
+    }
+    return true;
+}
+
+/**
  * S7 PDU Negotiation Telegram (contains also ISO Header and COTP Header)
  * @returns {Array} The protocol request to send (Array of bytes)
  */
@@ -99,7 +112,7 @@ exports.NegotiatePDULengthRequest = (seqNumber = 0) => {
     ret[3] = (TOTALLen % 0x100); // Low part of packet lenght (entire frame, payload and TPDU included)
     // COTP (ISO 8073 Header)
     ret[4] = 0x02;
-    ret[5] = FunctionCode.OpenS7Connection; // Connect on S7comm layer (s7comm.param.func = 0xf0, Setup communication)
+    ret[5] = FunctionCode.OpenS7Connection; // Connect on S7comm layer (param.func = 0xf0, Setup communication)
     ret[6] = 0x80; 
     // PDU Header
     ret[7] = 0x32; // protocol identifier (S7)
@@ -113,7 +126,7 @@ exports.NegotiatePDULengthRequest = (seqNumber = 0) => {
     ret[15] = Math.floor(DATALen / 0x100);
     ret[16] = (DATALen % 0x100);
     // PDU Parameters
-    ret[17] = FunctionCode.OpenS7Connection; // Connect on S7comm layer (s7comm.param.func = 0xf0, Setup communication)
+    ret[17] = FunctionCode.OpenS7Connection; // Connect on S7comm layer (param.func = 0xf0, Setup communication)
     ret[18] = 0x00;
     ret[19] = 0x00;
     ret[20] = 0x01; // 1=PG Communication, 2=OP Communication, 3=Step7Basic Communication
@@ -129,11 +142,35 @@ exports.NegotiatePDULengthRequest = (seqNumber = 0) => {
 }
 
 /**
+ * Validate and compute the "negotiate PDU length request" response from CPU
+ * @param {Array} response Array of byte, the response on "negotiate PDU length request"
+ * @returns {Boolean} Response as true or throw as Error
+ */
+exports.NegotiatePDULengthResponse = (response) => {
+    if (response.length != 27) {
+        let e = new Error("Error negotiating PDU!");
+        throw e;
+    }
+    return true;
+}
+
+/**
  * S7 Variable MultiRead full protocol request
  * @param {Array} tags The list of S7Tag to read
  * @returns {Array} The protocol request to send (Array of bytes)
  */
 exports.ReadRequest = (tags) => {
+    // assert MAXITEMSLIST
+    if (tags.length > MAXITEMSLIST) {
+        let e = new Error("Tags count is greater than Maximum (" + MAXITEMSLIST + ")");
+        throw e;
+    }
+    // assert MAXREADBYTES
+    let totalLength = tags.reduce((total, item) => total + (item['bytesSize'] || 0), 0);
+    if (totalLength > MAXREADBYTES) {
+        let e = new Error("Tags total length is greater than Maximum (" + MAXREADBYTES + ")");
+        throw e;
+    }
     // Request
     let ret = [];
     // Header
@@ -149,12 +186,80 @@ exports.ReadRequest = (tags) => {
 }
 
 /**
+ * Validate and compute the "data read request" response from CPU
+ * @param {Array} tags Array of S7tag
+ * @param {Array} data Array of byte, the response on "data read request"
+ * @returns {Promise} Response as array {Array of S7tag, Array of Array of bytes) or throw as Error
+ */
+exports.ReadResponse = (tags, data) => {
+    // assert ISO length
+    if (data.length < 22) {
+        let e = new Error("Error on data bytes read response!");
+        throw e;
+    } 
+    // assert Operation result
+    if (data[17] != 0 || data[18] != 0) {
+        let e = new Error("Read response return an error: " + data[17] + "/" + data[18]);
+        throw e;
+    } 
+    // assert Items Count
+    if (data[20] != tags.length || data[20] > MAXITEMSLIST) {
+        let e = new Error("Read response return invalid items count");
+        throw e;
+    }
+    // Read data result
+    let results = [];
+    let offset = 21;
+    tags.forEach((tag) => {
+        let normalizeByteSize = tag.bytesSize%2 ? (tag.bytesSize+1) : tag.bytesSize;
+        let tagResponse = data.slice(offset, offset + normalizeByteSize + 4);
+        // assert tag result
+        if (tagResponse[0] != 0xFF) {
+            // Error on read.
+            // add a null in tag value response
+            results.push({Tag: tag, Value: null});
+        }
+        // ATT: in tagResponse[1] there is the DataType to know how to manage the SIZE.
+        // I supposed to read only bytes > the SIZE is in bits
+        let itemBitsLength = tagResponse[2] * 256 + tagResponse[3];
+        let itemBytesLength = itemBitsLength / 8;
+        // assert tag result bytes length
+        if (itemBytesLength != tag.bytesSize) {
+            // Error reading tag bytes size
+            // add a null in tag value response
+            results.push({Tag: tag, Value: null});
+        }
+        // takes value
+        let tagValue = tagResponse.slice(4, 4 + tag.bytesSize);
+        results.push({Tag: tag, Value: Uint8Array.from(tagValue)});
+        offset += normalizeByteSize + 4;
+    });
+    return results;
+}
+
+/**
  * S7 Variable MultiWrite full protocol request 
  * @param {Array} tags The list of S7Tag to write
  * @param {Array} values The list of value to write
  * @returns {Array} The protocol request to send (Array of bytes)
  */
 exports.WriteRequest = (tags, values) => {
+    // assert tags count and values count
+    if (tags.length != values.length) {
+        let e = new Error("Tags count (" + tags.length + ") different from values count (" + values.length + ")");
+        throw e;
+    }
+    // assert MAXITEMSLIST
+    if (tags.length > MAXITEMSLIST) {
+        let e = new Error("Tags count is greater than Maximum (" + MAXITEMSLIST + ")");
+        throw e;
+    }
+    // assert MAXWRITEBYTES
+    let totalLength = tags.reduce((total, item) => total + (item['bytesSize'] || 0), 0);
+    if (totalLength > MAXWRITEBYTES) {
+        let e = new Error("Tags total length is greater than Maximum (" + MAXWRITEBYTES + ")");
+        throw e;
+    }
     // Request
     let ret = [];
     // Header
@@ -173,6 +278,32 @@ exports.WriteRequest = (tags, values) => {
         ret = ret.concat(itemValueRequest);
     }
     return ret;
+}
+
+/**
+ * Validate and compute the "data write request" response from CPU
+ * @param {Array} tags Array of S7tag
+ * @param {Array} data Array of byte, the response on "data write request"
+ * @returns {Promise} Response as array {Array of S7tag, Array of return code) or throw as Error
+ */
+exports.WriteResponse = (tags, data) => {
+    // assert Operation result
+    if (data[17] != 0 || data[18] != 0) {
+        let e = new Error("Write response return an error: " + data[17] + "/" + data[18]);
+        throw e;
+    } 
+    // assert Items Count
+    if (data[20] != tags.length || data[20] > MAXITEMSLIST) {
+        let e = new Error("Write response return invalid items count");
+        throw e;
+    } 
+    let results = [];
+    let offset = 21;
+    tags.forEach((tag) => {
+        results.push({Tag: tag, Value: data[offset]});
+        offset += 1;
+    });
+    return results;
 }
 
 // S7 Variable MultiRead Header
@@ -195,7 +326,7 @@ _readHeaderRequest = (itemsCount, seqNumber = 0) => {
     ret[3] = (TOTALLen % 0x100); // Low part of packet lenght (entire frame, payload and TPDU included)
     // COTP (ISO 8073 Header)
     ret[4] = 0x02;
-    ret[5] = FunctionCode.OpenS7Connection; // Connect on S7comm layer (s7comm.param.func = 0xf0, Setup communication)
+    ret[5] = FunctionCode.OpenS7Connection; // Connect on S7comm layer (param.func = 0xf0, Setup communication)
     ret[6] = 0x80; 
     // PDU Header
     ret[7] = 0x32; // protocol identifier (S7)
@@ -287,7 +418,7 @@ _writeHeaderRequest = (itemsValues, seqNumber = 0) => {
     ret[3] = (TOTALLen % 0x100); // Low part of packet lenght (entire frame, payload and TPDU included)
     // COTP (ISO 8073 Header)
     ret[4] = 0x02;
-    ret[5] = FunctionCode.OpenS7Connection; // Connect on S7comm layer (s7comm.param.func = 0xf0, Setup communication)
+    ret[5] = FunctionCode.OpenS7Connection; // Connect on S7comm layer (param.func = 0xf0, Setup communication)
     ret[6] = 0x80; 
     // PDU Header
     ret[7] = 0x32; // protocol identifier (S7)
