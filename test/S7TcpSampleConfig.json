@@ -1,12 +1,11 @@
 {
-    "name": "PLC",
+    "name": "S7Tcp",
     "socket": {
-        "ip": "192.168.2.22",
-        "port" : 102,
-        "rack" : 0,
-        "slot" : 1,
-        "autoreconnect" : 10000,
-        "timeout" : 60000,
-        "rwTimeout" : 5000
+        "ip": "192.168.1.91",
+        "port": 102,
+        "rack": 0,
+        "slot": 1,
+        "autoreconnect": 5000,
+        "timeout": 30000,
+        "rwTimeout": 0
     }
-}

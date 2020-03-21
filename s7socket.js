@@ -66,7 +66,7 @@ class S7Socket extends events{
      * @returns {Number} the next sequence number
      */
     #nextSequenceNumber = () => {
-        this.sequenceNumber = this.sequenceNumber++ % 65535;
+        this.sequenceNumber = ++this.sequenceNumber % 65535;
         return this.sequenceNumber;
     }
 
@@ -93,60 +93,19 @@ class S7Socket extends events{
     }
 
     /**
-     * Read from S7 CPU a single tag (MAX. 942 bytes)
-     * @param {S7Tag} tag The tag to read
-     * @returns {Object} Tag and it's value
-     */
-    read(tag) {    
-        if (!this.connected()) {
-            let e = new Error("Invalid socket status.");
-            this.#onError(e);
-        } else { 
-            this.lock.acquire('socket', async() => {
-                return await this.#multiRead([tag]);
-            }).then((result) => {
-                this.#onRead(result[0]);
-            }).catch((err) => {
-                this.#onError(err); 
-            });
-        }    
-    }
-
-    /**
-     * Write to S7 CPU a single tag (MAX. 932 bytes)
-     * @param {S7Tag} tag The tag to write
-     * @param {object} value The value to write
-     * @returns {Object} Tag and the write result
-     */
-    write(tag, value) {
-        if (!this.connected()) {
-            let e = new Error("Invalid socket status.");
-            this.#onError(e);
-        } else {
-            this.lock.acquire('socket', async() => {
-                return await this.#multiWrite([tag], [value]);
-            }, {skipQueue: true}).then((result) => {
-                this.#onWrite(result[0]);
-            }).catch((err) => {                
-                this.#onError(err);
-            });
-        }        
-    }
-
-    /**
      * Read from S7 CPU a list of tags (MAX. 20 tags)
      * @param {Array} tags The array of S7Tags to read
      * @returns {Array} Array of Tags and their values
          */
-    multiRead(tags) {
+    read(tags) {
         if (!this.connected()) {
             let e = new Error("Invalid socket status.");
             this.#onError(e);
         } else {
             this.lock.acquire('socket', async() => {
-                return await this.#multiRead(tags);
+                return await this.#read(tags);
             }).then((result) => {
-                this.#onMultiRead(result);
+                this.#onRead(result);
             }).catch((err) => {
                 this.#onError(err); 
             });
@@ -159,15 +118,15 @@ class S7Socket extends events{
      * @param {Array} values The array of values to write
      * @returns {Array} Array of Tags and their write results
      */
-    multiWrite(tags, values) {
+    write(tags, values) {
         if (!this.connected()) {
             let e = new Error("Invalid socket status.");
             this.#onError(e);
         } else {
             this.lock.acquire('socket', async() => {
-                return await this.#multiWrite(tags, values);
+                return await this.#write(tags, values);
             }, {skipQueue: true}).then((result) => {
-                this.#onMultiWrite(result);
+                this.#onWrite(result);
             }).catch((err) => {
                 this.#onError(err); 
             });
@@ -301,7 +260,7 @@ class S7Socket extends events{
      * @param {Array} tags Array of S7tag
      * @returns {Promise} Response as true or Reject as Error
      */
-    #multiReadAssertInput = (tags) => {
+    #readAssertInput = (tags) => {
         let self = this;
         return new Promise((resolve, reject) => {
             // assert s7comm.MAXITEMSLIST
@@ -325,7 +284,7 @@ class S7Socket extends events{
      * @param {Array} tags Array of S7tag
      * @returns {Promise} Response as array of bytes or Reject as Error
      */
-    #multiReadSendRequest = (tags) => {
+    #readSendRequest = (tags) => {
         let self = this;
         return new Promise(async (resolve, reject) => {
             let request = Uint8Array.from(s7comm.ReadRequest(tags, self.#nextSequenceNumber()));
@@ -351,7 +310,7 @@ class S7Socket extends events{
      * @param {Array} data Array of byte
      * @returns {Promise} Response as array {S7tag, Array of bytes) or Reject as Error
      */
-    #multiReadSendResponse = (tags, data) => {
+    #readSendResponse = (tags, data) => {
         let self = this;
         return new Promise((resolve, reject) => {
             // assert ISO length
@@ -405,13 +364,13 @@ class S7Socket extends events{
      * @param {Array} tags Array of S7tag
      * @returns {Promise} Response as array {S7tag, value) or Reject as Error
      */
-    #multiRead = (tags) => {    
+    #read = (tags) => {    
         let self = this;
         return new Promise(async (resolve, reject) => {
             try {
-                let multiReadAssert = await self.#multiReadAssertInput(tags);
-                let dataRead = await self.#multiReadSendRequest(tags);
-                let result = await self.#multiReadSendResponse(tags, dataRead);
+                let readAssert = await self.#readAssertInput(tags);
+                let dataRead = await self.#readSendRequest(tags);
+                let result = await self.#readSendResponse(tags, dataRead);
                 resolve(result);
             } catch (e) {
                 reject(e);
@@ -425,7 +384,7 @@ class S7Socket extends events{
      * @param {Array} values Array of Array of byte
      * @returns {Promise} Response as true or Reject as Error
      */
-    #multiWriteAssertInput = (tags, values) => {
+    #writeAssertInput = (tags, values) => {
         let self = this;
         return new Promise((resolve, reject) => {
             // assert tags count and values count
@@ -454,7 +413,7 @@ class S7Socket extends events{
      * @param {Array} values Array of Array of byte
      * @returns {Promise} Response as true or Reject as Error
      */
-    #multiWriteSendRequest = (tags, values) => {
+    #writeSendRequest = (tags, values) => {
         let self = this;
         return new Promise(async (resolve, reject) => {
             let request = Uint8Array.from(s7comm.WriteRequest(tags, values));
@@ -480,7 +439,7 @@ class S7Socket extends events{
      * @param {Array} data Array of byte
      * @returns {Promise} Response as array {S7tag, Byte) or Reject as Error
      */
-    #multiWriteSendResponse = (tags, data) => {
+    #writeSendResponse = (tags, data) => {
         let self = this;
         return new Promise((resolve, reject) => {
             // assert Operation result
@@ -509,13 +468,13 @@ class S7Socket extends events{
      * @param {Array} values Array of Array of byte
      * @returns {Promise} Response as array {S7tag, Byte) or Reject as Error
      */
-    #multiWrite = (tags, values) => {
+    #write = (tags, values) => {
         let self = this;
         return new Promise(async (resolve, reject) => {
             try {
-                let multiReadAssert = await self.#multiWriteAssertInput(tags, values);
-                let dataRead = await self.#multiWriteSendRequest(tags, values);
-                let result = await self.#multiWriteSendResponse(tags, dataRead);
+                let readAssert = await self.#writeAssertInput(tags, values);
+                let dataRead = await self.#writeSendRequest(tags, values);
+                let result = await self.#writeSendResponse(tags, dataRead);
                 resolve(result);
             } catch (e) {
                 reject(e);
@@ -533,14 +492,6 @@ class S7Socket extends events{
 
     #onWrite = (results) => {
         this.emit('write', results);
-    }
-
-    #onMultiRead = (results) => {
-        this.emit('multiRead', results);
-    }
-
-    #onMultiWrite = (results) => {
-        this.emit('multiWrite', results);
     }
 
     #onError = (error) => {        
