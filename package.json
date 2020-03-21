@@ -4,7 +4,7 @@
   "description": "S7Tcp (S7 ISO-on-TCP) is a Siemens proprietary protocol that runs between programmable logic controllers (PLCs) of the Siemens S7-300/400 (S71200/1500) family.",
   "main": "index.js",
   "dependencies": {
-    "async-lock": "^1.2.2"
+    "async-lock": "github:mirkoboggian/async-lock"
   },
   "devDependencies": {},
   "scripts": {

@@ -28,7 +28,8 @@ class S7Socket extends events{
         this.autoreconnect = autoreconnect;
         this.timeout = timeout;
         this.rwTimeout = rwTimeout;
-        this.lock = new alock({timeout: this.rwTimeout});
+
+        this.lock = new alock({timeout: this.rwTimeout, maxPending: 20});
 
         // internal use
         this.connecting = false;
@@ -46,6 +47,7 @@ class S7Socket extends events{
     /**
      * Create a S7Socket instance using a config object
      * @param {object} config object with parameters like {"ip":"192.168.1.1", "port":102, .. }
+     * @returns {S7Socket} a S7Socket instance
      */
     static fromConfig(config) {
         try {
@@ -58,8 +60,10 @@ class S7Socket extends events{
         }
     }
 
+
+
     /**
-     * Try to connect the Socket to CPU
+     * Try to connect the Socket to CPU     
      */
     async connect() {
         this.connecting = true;
@@ -74,6 +78,7 @@ class S7Socket extends events{
 
     /**
      * Check if S7socket is connected
+     * @returns {Boolean} 'true' if connect, else 'false'
      */
     connected() {
         return (this._socket && this._socket.readyState == "open");
@@ -82,6 +87,7 @@ class S7Socket extends events{
     /**
      * Read from S7 CPU a single tag (MAX. 942 bytes)
      * @param {S7Tag} tag The tag to read
+     * @returns {Object} Tag and it's value
      */
     read(tag) {    
         if (!this.connected()) {
@@ -102,6 +108,7 @@ class S7Socket extends events{
      * Write to S7 CPU a single tag (MAX. 932 bytes)
      * @param {S7Tag} tag The tag to write
      * @param {object} value The value to write
+     * @returns {Object} Tag and the write result
      */
     write(tag, value) {
         if (!this.connected()) {
@@ -110,7 +117,7 @@ class S7Socket extends events{
         } else {
             this.lock.acquire('socket', async() => {
                 return await this.#multiWrite([tag], [value]);
-            }).then((result) => {
+            }, {skipQueue: true}).then((result) => {
                 this.#onWrite(result[0]);
             }).catch((err) => {                
                 this.#onError(err);
@@ -121,7 +128,8 @@ class S7Socket extends events{
     /**
      * Read from S7 CPU a list of tags (MAX. 20 tags)
      * @param {Array} tags The array of S7Tags to read
-     */
+     * @returns {Array} Array of Tags and their values
+         */
     multiRead(tags) {
         if (!this.connected()) {
             let e = new Error("Invalid socket status.");
@@ -141,6 +149,7 @@ class S7Socket extends events{
      * Write to S7 CPU a list of tags/values (MAX. 20 tags)
      * @param {Array} tags The array of S7Tags to write
      * @param {Array} values The array of values to write
+     * @returns {Array} Array of Tags and their write results
      */
     multiWrite(tags, values) {
         if (!this.connected()) {
@@ -149,7 +158,7 @@ class S7Socket extends events{
         } else {
             this.lock.acquire('socket', async() => {
                 return await this.#multiWrite(tags, values);
-            }).then((result) => {
+            }, {skipQueue: true}).then((result) => {
                 this.#onMultiWrite(result);
             }).catch((err) => {
                 this.#onError(err); 
@@ -526,9 +535,11 @@ class S7Socket extends events{
         this.emit('multiWrite', results);
     }
 
-    #onError = (error) => {
-        this.emit('error', error);
+    #onError = (error) => {        
+        // this.lock = new alock({timeout: this.rwTimeout, maxPending: 20});
         this._socket.destroy();
+        this.connecting = false;
+        this.emit('error', error);
     }
 }
 
