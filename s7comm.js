@@ -81,7 +81,7 @@ exports.RegisterSessionRequest = (rack, slot) => {
  * S7 PDU Negotiation Telegram (contains also ISO Header and COTP Header)
  * @returns {Array} The protocol request to send (Array of bytes)
  */
-exports.NegotiatePDULengthRequest = () => {
+exports.NegotiatePDULengthRequest = (seqNumber = 0) => {
     // Consts
     const TPKTLen = 4;
     const COTPLen = 3;
@@ -89,7 +89,6 @@ exports.NegotiatePDULengthRequest = () => {
     const PUDParLen = 8;
     const DATALen = 0;
     const PDUReqType = PDUType.Request;
-    const SEQNumber = 1024; // Sequence Number ??? 65535;
     const TOTALLen = TPKTLen + COTPLen + PDUHeaderLen + PUDParLen + DATALen;
     // Request
     let ret = [];
@@ -107,8 +106,8 @@ exports.NegotiatePDULengthRequest = () => {
     ret[8] = PDUReqType; // Job Type
     ret[9] = 0x00; // Redundancy identification (1)
     ret[10] = 0x00; // Redundancy identification (2)
-    ret[11] = Math.floor(SEQNumber / 0x100);
-    ret[12] = (SEQNumber % 0x100);
+    ret[11] = Math.floor(seqNumber / 0x100);
+    ret[12] = (seqNumber % 0x100);
     ret[13] = Math.floor(PUDParLen / 0x100);
     ret[14] = (PUDParLen % 0x100);
     ret[15] = Math.floor(DATALen / 0x100);
@@ -177,7 +176,7 @@ exports.WriteRequest = (tags, values) => {
 }
 
 // S7 Variable MultiRead Header
-_readHeaderRequest = (itemsCount) => {
+_readHeaderRequest = (itemsCount, seqNumber = 0) => {
     // Consts
     const TPKTLen = 4;
     const COTPLen = 3;
@@ -186,7 +185,6 @@ _readHeaderRequest = (itemsCount) => {
     const PUDParLen = itemsCount * ITEMLen + 2; // Read parameter
     const DATALen = 0;
     const PDUReqType = PDUType.Request;
-    const SEQNumber = 1280; // Sequence Number ??? 0;
     const TOTALLen = TPKTLen + COTPLen + PDUHeaderLen + PUDParLen + DATALen;
     // Request
     let ret = [];
@@ -204,8 +202,8 @@ _readHeaderRequest = (itemsCount) => {
     ret[8] = PDUReqType; // Job Type
     ret[9] = 0x00; // Redundancy identification (1)
     ret[10] = 0x00; // Redundancy identification (2)
-    ret[11] = Math.floor(SEQNumber / 0x100);
-    ret[12] = (SEQNumber % 0x100);
+    ret[11] = Math.floor(seqNumber / 0x100);
+    ret[12] = (seqNumber % 0x100);
     ret[13] = Math.floor(PUDParLen / 0x100);
     ret[14] = (PUDParLen % 0x100);
     ret[15] = Math.floor(DATALen / 0x100);
@@ -261,7 +259,7 @@ _readItemRequest = (parArea, areaNumber, start, len, isBit) => {
 }
 
 // S7 Variable MultiRead Header
-_writeHeaderRequest = (itemsValues) => {
+_writeHeaderRequest = (itemsValues, seqNumber = 0) => {
     // Analize values
     let itemsCount = itemsValues.length;
     let itemsLen = 0;
@@ -279,7 +277,6 @@ _writeHeaderRequest = (itemsValues) => {
     const PUDParLen = itemsCount * ITEMLen + 2; // Write parameter
     const DATALen = itemsLen;
     const PDUReqType = PDUType.Request;
-    const SEQNumber = 1280; // Sequence Number ??? 0;
     const TOTALLen = TPKTLen + COTPLen + PDUHeaderLen + PUDParLen + DATALen;
     // Request
     let ret = [];
@@ -297,8 +294,8 @@ _writeHeaderRequest = (itemsValues) => {
     ret[8] = PDUReqType; // Job Type
     ret[9] = 0x00; // Redundancy identification (1)
     ret[10] = 0x00; // Redundancy identification (2)
-    ret[11] = Math.floor(SEQNumber / 0x100);
-    ret[12] = (SEQNumber % 0x100);
+    ret[11] = Math.floor(seqNumber / 0x100);
+    ret[12] = (seqNumber % 0x100);
     ret[13] = Math.floor(PUDParLen / 0x100);
     ret[14] = (PUDParLen % 0x100);
     ret[15] = Math.floor(DATALen / 0x100);

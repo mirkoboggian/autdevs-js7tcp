@@ -60,7 +60,15 @@ class S7Socket extends events{
         }
     }
 
-
+    sequenceNumber = 0;
+    /**
+     * Generate a Sequence number for connect/read/write request 
+     * @returns {Number} the next sequence number
+     */
+    #nextSequenceNumber = () => {
+        this.sequenceNumber = this.sequenceNumber++ % 65535;
+        return this.sequenceNumber;
+    }
 
     /**
      * Try to connect the Socket to CPU     
@@ -320,7 +328,7 @@ class S7Socket extends events{
     #multiReadSendRequest = (tags) => {
         let self = this;
         return new Promise(async (resolve, reject) => {
-            let request = Uint8Array.from(s7comm.ReadRequest(tags));
+            let request = Uint8Array.from(s7comm.ReadRequest(tags, self.#nextSequenceNumber()));
             // ATT! important to register on socket error too!
             // If n error on socket occour the lock is never release
             // To avoid too many listener Error remove it before return promise
@@ -456,7 +464,7 @@ class S7Socket extends events{
             let onceSocketError = (e) => { reject(e); }
             self._socket.once('error', onceSocketError);
             try {
-                let writeRequestResponse = await self.#socketSendReceive(request);                
+                let writeRequestResponse = await self.#socketSendReceive(request, self.#nextSequenceNumber());                
                 self._socket.off('error', onceSocketError);
                 resolve(writeRequestResponse);
             } catch (e) {
