@@ -4,14 +4,14 @@ const events = require('events');
 const alock = require('async-lock');
 
 // Local Consts
-const MAXPENDING = 20;
+const MAXPENDING = 10;
 if (Object.freeze) {
     Object.freeze(MAXPENDING);
 }
 exports.MAXPENDING = MAXPENDING;
 
 /**
- * S7Socket Class encapsulate a TCP socket to manage connection to device, read tags and write tags.
+ * S7Socket Class encapsulate a TCP single socket to manage connection to device, read tags and write tags.
  * The socket is protect from concurrent request by lock.
  */
 class S7Socket extends events{
@@ -42,12 +42,7 @@ class S7Socket extends events{
         this.connecting = false;
         this.reconnectIntervall = null;
         if(this.autoreconnect > 0) {
-            this.connect();
-            this.reconnectIntervall = setInterval(() => {
-                if (!this.connected() && !this.connecting) {
-                    this.connect();
-                }
-            }, this.autoreconnect);
+            this.#autoreconnect();
         }        
     }
     
@@ -89,6 +84,15 @@ class S7Socket extends events{
             this.connecting = false;
             this.#onError(e);
         });        
+    }
+
+    #autoreconnect = () => {
+        this.connect();
+        this.reconnectIntervall = setInterval(() => {
+            if (!this.connected() && !this.connecting) {
+                this.connect();
+            }
+        }, this.autoreconnect);
     }
 
     /**
@@ -399,6 +403,5 @@ class S7Socket extends events{
         this.emit('error', error);
     }
 }
-
 
 module.exports = S7Socket;

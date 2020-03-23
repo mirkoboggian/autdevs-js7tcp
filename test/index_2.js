@@ -9,14 +9,13 @@ s7socket.on('connect', () => {
 
     //#region Write
 
-    setInterval(() => {
-        var db1dbw0 = S7Tag.fromPath("db1dbw0", "DB1.DBW0");
-        var db1dbw10 = S7Tag.fromPath("db1dbw10", "DB1.DBW10");
-        var db1dbw14 = S7Tag.fromPath("db1dbw14", "DB1.DBW14");
-        var db1dbw8 = S7Tag.fromPath("db1dbw8", "DB1.DBW8");
-        var db1dbw26 = S7Tag.fromPath("db1dbw26", "DB1.DBW26");
-        var items = [db1dbw0, db1dbw10, db1dbw14, db1dbw8, db1dbw26];
-        
+    var db1dbw0 = S7Tag.fromPath("db1dbw0", "DB1.DBW0");
+    var db1dbw10 = S7Tag.fromPath("db1dbw10", "DB1.DBW10");
+    var db1dbw14 = S7Tag.fromPath("db1dbw14", "DB1.DBW14");
+    var db1dbw8 = S7Tag.fromPath("db1dbw8", "DB1.DBW8");
+    var db1dbw26 = S7Tag.fromPath("db1dbw26", "DB1.DBW26");
+    var items = [db1dbw0, db1dbw10, db1dbw14, db1dbw8, db1dbw26];    
+    setInterval(async() => {
         let now = new Date(Date.now());
         var values = [
             [1+now.getSeconds(), 2+now.getSeconds()],
@@ -25,25 +24,25 @@ s7socket.on('connect', () => {
             [7+now.getSeconds(), 8+now.getSeconds()],
             [9+now.getSeconds(), 10+now.getSeconds()]
         ];   
-        var mrRequest = s7socket.write(items, values);
-    }, 10);
+        await s7socket.write(items, values);
+    }, 100);
 
     //#endregion
 
     //#region Read
 
-    setInterval(() => {
-        var db1dbw0 = S7Tag.fromPath("db1dbw0", "DB1.DBW0[10]");
-        var db1dbw10 = S7Tag.fromPath("db1dbw10", "DB1.DBW10");
-        var db1dbw14 = S7Tag.fromPath("db1dbw14", "DB1.DBW14");
-        var db1dbb9 = S7Tag.fromPath("db1dbb9", "DB1.DBb100[11]");
-        var db1dbw8 = S7Tag.fromPath("db1dbw8", "DB1.DBW8");
-        var db1dbb8 = S7Tag.fromPath("db1dbb8", "DB1.DBb1008");
-        var db1dbb9 = S7Tag.fromPath("db1dbb9", "DB1.DBb229");
-        var db1dbw26 = S7Tag.fromPath("db1dbw26", "DB1.DBW126");        
-        var items = [db1dbw0, db1dbw10, db1dbw14, db1dbw8, db1dbw26, db1dbb8, db1dbb9];
-        var mrRequest = s7socket.read(items);
-    }, 10);
+    var db1dbw0 = S7Tag.fromPath("db1dbw0", "DB1.DBW0[10]");
+    var db1dbw10 = S7Tag.fromPath("db1dbw10", "DB1.DBW10");
+    var db1dbw14 = S7Tag.fromPath("db1dbw14", "DB1.DBW14");
+    var db1dbb9 = S7Tag.fromPath("db1dbb9", "DB1.DBb100[11]");
+    var db1dbw8 = S7Tag.fromPath("db1dbw8", "DB1.DBW8");
+    var db1dbb8 = S7Tag.fromPath("db1dbb8", "DB1.DBb1008");
+    var db1dbb9 = S7Tag.fromPath("db1dbb9", "DB1.DBb229");
+    var db1dbw26 = S7Tag.fromPath("db1dbw26", "DB1.DBW126");  
+    var items = [db1dbw0, db1dbw10, db1dbw14, db1dbw8, db1dbw26, db1dbb8, db1dbb9];
+    setInterval(() => {   
+        s7socket.read(items);
+    }, 100);
 
     //#endregion
         
