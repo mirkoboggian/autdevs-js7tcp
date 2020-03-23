@@ -21,11 +21,14 @@ s7socket.on('connect', () => {
 
     setInterval(() => {
         s7socket.write(tags, values);
-    }, 10);
+    }, 100);
 
     setInterval(() => {
         s7socket.read(tags);
-    }, 10);
+        s7socket.read([Db1DbR0]);
+        s7socket.read([Db1DbS1]);
+        s7socket.read([Db1DbI3628]);
+    }, 100);
         
 });
 
