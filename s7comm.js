@@ -145,7 +145,7 @@ class S7Comm {
             throw e;
         }
         // check sequence number
-        let rcSeqNumber = response[11]*255 + response[12];
+        let rcSeqNumber = response[11]*256 + response[12];
         if (rcSeqNumber != seqNumber) {
             let e = new Error("Error negotiating PDU: invalid sequence number");
             throw e;
@@ -207,7 +207,7 @@ class S7Comm {
             throw e;
         }
         // check sequence number
-        let rcSeqNumber = data[11]*255 + data[12];
+        let rcSeqNumber = data[11]*256 + data[12];
         if (rcSeqNumber != seqNumber) {
             let e = new Error("Read response: invalid sequence number");
             throw e;
@@ -303,7 +303,7 @@ class S7Comm {
             throw e;
         }
         // check sequence number
-        let rcSeqNumber = data[11]*255 + data[12];
+        let rcSeqNumber = data[11]*256 + data[12];
         if (rcSeqNumber != seqNumber) {
             let e = new Error("Write response: invalid sequence number");
             throw e;
