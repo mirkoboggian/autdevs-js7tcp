@@ -138,9 +138,16 @@ class S7Comm {
      * @param {Array} response Array of byte, the response on "negotiate PDU length request"
      * @returns {Boolean} Response as true or throw as Error
      */
-    static NegotiatePDULengthResponse = (response) => {
+    static NegotiatePDULengthResponse = (response, seqNumber = 0) => {
+        // check response length
         if (response.length != 27) {
             let e = new Error("Error negotiating PDU!");
+            throw e;
+        }
+        // check sequence number
+        let rcSeqNumber = response[11]*255 + response[12];
+        if (rcSeqNumber != seqNumber) {
+            let e = new Error("Error negotiating PDU: invalid sequence number");
             throw e;
         }
         return true;
@@ -151,7 +158,7 @@ class S7Comm {
      * @param {Array} tags The list of S7Tag to read
      * @returns {Array} The protocol request to send (Array of bytes)
      */
-    static ReadRequest = (tags) => {
+    static ReadRequest = (tags, seqNumber = 0) => {
         // assert MAXITEMSLIST
         if (tags.length > MAXITEMSLIST) {
             let e = new Error("Tags count is greater than Maximum (" + MAXITEMSLIST + ")");
@@ -167,7 +174,7 @@ class S7Comm {
         let ret = [];
         // Header
         let itemsCount = tags.length;
-        ret = ret.concat(this.#readHeaderRequest(itemsCount));
+        ret = ret.concat(this.#readHeaderRequest(itemsCount, seqNumber));
         // Items Add
         for(let i = 0; i < itemsCount; i++) {
             let item = tags[i];
@@ -183,7 +190,7 @@ class S7Comm {
      * @param {Array} data Array of byte, the response on "data read request"
      * @returns {Promise} Response as array {Array of S7tag, Array of Array of bytes) or throw as Error
      */
-    static ReadResponse = (tags, data) => {
+    static ReadResponse = (tags, data, seqNumber = 0) => {
         // assert ISO length
         if (data.length < 22) {
             let e = new Error("Error on data bytes read response!");
@@ -197,6 +204,12 @@ class S7Comm {
         // assert Items Count
         if (data[20] != tags.length || data[20] > MAXITEMSLIST) {
             let e = new Error("Read response return invalid items count");
+            throw e;
+        }
+        // check sequence number
+        let rcSeqNumber = data[11]*255 + data[12];
+        if (rcSeqNumber != seqNumber) {
+            let e = new Error("Read response: invalid sequence number");
             throw e;
         }
         // Read data result
@@ -235,7 +248,7 @@ class S7Comm {
      * @param {Array} values The list of value to write
      * @returns {Array} The protocol request to send (Array of bytes)
      */
-    static WriteRequest = (tags, values) => {
+    static WriteRequest = (tags, values, seqNumber = 0) => {
         // assert tags count and values count
         if (tags.length != values.length) {
             let e = new Error("Tags count (" + tags.length + ") different from values count (" + values.length + ")");
@@ -255,7 +268,7 @@ class S7Comm {
         // Request
         let ret = [];
         // Header
-        ret = ret.concat(this.#writeHeaderRequest(values));
+        ret = ret.concat(this.#writeHeaderRequest(values, seqNumber));
         // Items Add
         let itemsCount = tags.length;
         for(let i = 0; i < itemsCount; i++) {
@@ -278,7 +291,7 @@ class S7Comm {
      * @param {Array} data Array of byte, the response on "data write request"
      * @returns {Promise} Response as array {Array of S7tag, Array of return code) or throw as Error
      */
-    static WriteResponse = (tags, data) => {
+    static WriteResponse = (tags, data, seqNumber = 0) => {
         // assert Operation result
         if (data[17] != 0 || data[18] != 0) {
             let e = new Error("Write response return an error: " + data[17] + "/" + data[18]);
@@ -288,7 +301,13 @@ class S7Comm {
         if (data[20] != tags.length || data[20] > MAXITEMSLIST) {
             let e = new Error("Write response return invalid items count");
             throw e;
-        } 
+        }
+        // check sequence number
+        let rcSeqNumber = data[11]*255 + data[12];
+        if (rcSeqNumber != seqNumber) {
+            let e = new Error("Write response: invalid sequence number");
+            throw e;
+        }
         let results = [];
         let offset = 21;
         tags.forEach((tag) => {

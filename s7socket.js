@@ -230,11 +230,12 @@ class S7Socket extends events{
     #NegotiatePDULength = () => {
         let self = this;
         return new Promise(async (resolve, reject) => {
-            let request = Uint8Array.from(s7comm.NegotiatePDULengthRequest());
+            let seqNumber = self.#nextSequenceNumber();
+            let request = Uint8Array.from(s7comm.NegotiatePDULengthRequest(seqNumber));
             try {
                 let negotiatePDULengthResponse = await self.#socketSendReceive(request);
                 let response = Uint8Array.from(negotiatePDULengthResponse);
-                let result = s7comm.NegotiatePDULengthResponse(response);
+                let result = s7comm.NegotiatePDULengthResponse(response, seqNumber);
                 resolve(result);
             } catch (e) {
                 reject(e);
@@ -265,10 +266,10 @@ class S7Socket extends events{
      * @param {Array} tags Array of S7tag
      * @returns {Promise} Response as array of bytes or Reject as Error
      */
-    #readSendRequest = (tags) => {
+    #readSendRequest = (tags, seqNumber) => {
         let self = this;
         return new Promise(async (resolve, reject) => {
-            let request = Uint8Array.from(s7comm.ReadRequest(tags, self.#nextSequenceNumber()));
+            let request = Uint8Array.from(s7comm.ReadRequest(tags, seqNumber));
             // ATT! important to register on socket error too!
             // If n error on socket occour the lock is never release
             // To avoid too many listener Error remove it before return promise
@@ -291,11 +292,11 @@ class S7Socket extends events{
      * @param {Array} data Array of byte
      * @returns {Promise} Response as array {S7tag, Array of bytes) or Reject as Error
      */
-    #readSendResponse = (tags, data) => {
+    #readSendResponse = (tags, data, seqNumber) => {
         let self = this;
         return new Promise((resolve, reject) => {
             try {
-                let results = s7comm.ReadResponse(tags, data);
+                let results = s7comm.ReadResponse(tags, data, seqNumber);
                 resolve(results);
             } catch(e) {
                 reject(e);
@@ -312,8 +313,9 @@ class S7Socket extends events{
         let self = this;
         return new Promise(async (resolve, reject) => {
             try {
-                let dataRead = await self.#readSendRequest(tags);
-                let result = await self.#readSendResponse(tags, dataRead);
+                let seqNumber = self.#nextSequenceNumber();
+                let dataRead = await self.#readSendRequest(tags, seqNumber);
+                let result = await self.#readSendResponse(tags, dataRead, seqNumber);
                 resolve(result);
             } catch (e) {
                 reject(e);
@@ -327,17 +329,17 @@ class S7Socket extends events{
      * @param {Array} values Array of Array of byte
      * @returns {Promise} Response as true or Reject as Error
      */
-    #writeSendRequest = (tags, values) => {
+    #writeSendRequest = (tags, values, seqNumber) => {
         let self = this;
         return new Promise(async (resolve, reject) => {
-            let request = Uint8Array.from(s7comm.WriteRequest(tags, values));
+            let request = Uint8Array.from(s7comm.WriteRequest(tags, values, seqNumber));
             // ATT! important to register on socket error too!
             // If n error on socket occour the lock is never release
             // To avoid too many listener Error remove it before return promise
             let onceSocketError = (e) => { reject(e); }
             self._socket.once('error', onceSocketError);
             try {
-                let writeRequestResponse = await self.#socketSendReceive(request, self.#nextSequenceNumber());                
+                let writeRequestResponse = await self.#socketSendReceive(request);                
                 self._socket.off('error', onceSocketError);
                 resolve(writeRequestResponse);
             } catch (e) {
@@ -353,11 +355,11 @@ class S7Socket extends events{
      * @param {Array} data Array of byte
      * @returns {Promise} Response as array {S7tag, Byte) or Reject as Error
      */
-    #writeSendResponse = (tags, data) => {
+    #writeSendResponse = (tags, data, seqNumber)  => {
         let self = this;
         return new Promise((resolve, reject) => {
             try {
-                let results = s7comm.WriteResponse(tags, data);
+                let results = s7comm.WriteResponse(tags, data, seqNumber);
                 resolve(results);
             } catch(e) {
                 reject(e);
@@ -375,8 +377,9 @@ class S7Socket extends events{
         let self = this;
         return new Promise(async (resolve, reject) => {
             try {
-                let dataRead = await self.#writeSendRequest(tags, values);
-                let result = await self.#writeSendResponse(tags, dataRead);
+                let seqNumber = self.#nextSequenceNumber();
+                let dataRead = await self.#writeSendRequest(tags, values, seqNumber);
+                let result = await self.#writeSendResponse(tags, dataRead, seqNumber);
                 resolve(result);
             } catch (e) {
                 reject(e);
