@@ -37,7 +37,6 @@ s7socket.on('connect', () => {
     var db1dbb9 = S7Tag.fromPath("db1dbb9", "DB1.DBb100[11]");
     var db1dbw8 = S7Tag.fromPath("db1dbw8", "DB1.DBW8");
     var db1dbb8 = S7Tag.fromPath("db1dbb8", "DB1.DBb1008");
-    var db1dbb9 = S7Tag.fromPath("db1dbb9", "DB1.DBb229");
     var db1dbw26 = S7Tag.fromPath("db1dbw26", "DB1.DBW126");  
     var items = [db1dbw0, db1dbw10, db1dbw14, db1dbw8, db1dbw26, db1dbb8, db1dbb9];
     setInterval(() => {   
