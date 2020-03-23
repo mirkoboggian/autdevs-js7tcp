@@ -9,8 +9,7 @@
   "devDependencies": {},
   "scripts": {
     "generate-docs": "jsdoc -c ./jsdoc/config.json",
-    "sample1": "node ./sample/index_1.js",
-    "sample2": "node ./sample/index_2.js"
+    "sample1": "node ./sample/index_1.js"
   },
   "author": "Mirko Boggian <mirko.boggian@gmail.com> (http://www.mirkoboggian.com)",
   "license": "UNLICENSED",
