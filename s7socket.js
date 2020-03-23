@@ -66,7 +66,7 @@ class S7Socket extends events{
      * @returns {Number} the next sequence number
      */
     #nextSequenceNumber = () => {
-        this.sequenceNumber = this.sequenceNumber++ % 65535;
+        this.sequenceNumber = ++this.sequenceNumber % 65535;
         return this.sequenceNumber;
     }
 

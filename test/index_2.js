@@ -264,22 +264,22 @@ s7socket.on('error', (error) => {
 });
 
 s7socket.on('read', (result) => {
-    console.info("READ: ", result.Tag.path, result.Tag.fromBytes(result.Value));
+    console.info("(", s7socket.sequenceNumber, ") READ: ", result.Tag.path, result.Tag.fromBytes(result.Value));
 });
 
 s7socket.on('write', (result) => {
-    console.warn("WRITE: ", result.Tag.path + ": " + (result.Value == 255));
+    console.warn("(", s7socket.sequenceNumber, ") WRITE: ", result.Tag.path + ": " + (result.Value == 255));
 });
 
 s7socket.on('multiRead', (result) => {
     result.forEach((r) => {
-        console.info("READ: ", r.Tag.path, r.Value);
+        console.info("(", s7socket.sequenceNumber, ") READ: ", r.Tag.path, r.Value);
     });
 });
 
 s7socket.on('multiWrite', (result) => {
     result.forEach((r) => {
-        console.info("WRITE: ", r.Tag.path, (r.Value == 255));
+        console.info("(", s7socket.sequenceNumber, ") WRITE: ", r.Tag.path, (r.Value == 255));
     });
 });
 
