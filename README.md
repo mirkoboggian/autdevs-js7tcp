@@ -54,8 +54,11 @@ I TypeCode identificano i tipi base (bit, byte, caratteri, valori interi a 16/32
 
 ## TODO
 * Letture/Scritture a Bit non ancora realizzate/testate.
-* TagPath: L'espressione regolare non è GARANTITA. Ci sono troppi sottocasi da valutare..
+* TagPath: L'espressione regolare non è GARANTITA. Non sono un esperto. Chi può la migliori.
 * Eseguire più richieste di lettura/scrittura per quei Tags o gruppi di Tags che superano i limiti in Bytes per ogni richiesta
+* In ogni richiesta (negoziazione lunghezza PDU, lettura tags, scrittura tags) esiste un indice sequenziale di richiesta. 
+Al momento ad ogni scrittura su socket si attende la risposta per procedere (async-await). 
+Da valutare se possibile inviare le richieste ed analizzare/associare le risposte solo quando queste sono ricevute.
 
 ## NOTE
 * Le letture/scritture Timer/Contatori non verranno mai testate/implementate.

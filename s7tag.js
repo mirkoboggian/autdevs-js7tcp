@@ -1,7 +1,6 @@
-// Enums
+const events = require('events');
 const ParameterArea = require("./enums/ParameterArea");
 const DataType = require("./enums/DataType");
-const events = require('events');
 
 /**
  * S7Tag Class provide a safe mechanism to manage tags as S7 device needs.
