@@ -20,11 +20,11 @@ s7socket.on('connect', () => {
     let values = [Db1DbR0_val, Db1DbS1_val, Db1DbI3628_val];
 
     setInterval(() => {
-        s7socket.multiWrite(tags, values);
+        s7socket.write(tags, values);
     }, 10);
 
     setInterval(() => {
-        s7socket.multiRead(tags);
+        s7socket.read(tags);
     }, 10);
         
 });
@@ -34,20 +34,12 @@ s7socket.on('error', (error) => {
 });
 
 s7socket.on('read', (result) => {
-    console.info("READ: ", result.Tag.path, result.Tag.fromBytes(result.Value));
-});
-
-s7socket.on('write', (result) => {
-    console.warn("WRITE: ", result.Tag.path + ": " + (result.Value == 255));
-});
-
-s7socket.on('multiRead', (result) => {
     result.forEach((r) => {
         console.info("READ: ", r.Tag.path, r.Tag.fromBytes(r.Value));
     });
 });
 
-s7socket.on('multiWrite', (result) => {
+s7socket.on('write', (result) => {
     result.forEach((r) => {
         console.info("WRITE: ", r.Tag.path, (r.Value == 255));
     });

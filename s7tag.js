@@ -1,4 +1,6 @@
-const s7comm = require("./s7comm");
+// Enums
+const ParameterArea = require("./enums/ParameterArea");
+const DataType = require("./enums/DataType");
 const events = require('events');
 
 /**
@@ -122,7 +124,7 @@ class S7Tag extends events {
      * @returns {ParameterArea} The ParameterArea value
      */
     getParameterArea() {
-        let dti = s7comm.ParameterArea.Info[this.areaCode].index;
+        let dti = ParameterArea.Info[this.areaCode].index;
         return dti;
     }
 
@@ -131,8 +133,8 @@ class S7Tag extends events {
      * @returns {DataType} The DataType value
      */
     getDataType() {
-        if (this.bit) return s7comm.DataType.Bit;
-        let dti = s7comm.DataType.Info[this.typeCode].index;
+        if (this.bit) return DataType.Bit;
+        let dti = DataType.Info[this.typeCode].index;
         return dti;
     }
 
@@ -141,7 +143,7 @@ class S7Tag extends events {
      * @returns {numeric} The DataType size in bits
      */
     getBitsSize() {
-        let bitsSize = s7comm.DataType.Info[this.typeCode].size(this.array ? this.array : 1);
+        let bitsSize = DataType.Info[this.typeCode].size(this.array ? this.array : 1);
         return bitsSize;
     }
 
@@ -159,7 +161,7 @@ class S7Tag extends events {
      * @returns {object} The default value for s7tag dataType
      */
     getDefault() {        
-        let dv = s7comm.DataType.Info[this.typeCode].default;
+        let dv = DataType.Info[this.typeCode].default;
         return dv;
     }
 
@@ -169,7 +171,7 @@ class S7Tag extends events {
      * @returns {object} The value conversion
      */
     fromBytes(bytes) {
-        let func = s7comm.DataType.Info[this.typeCode].fromBytes;
+        let func = DataType.Info[this.typeCode].fromBytes;
         if(this.typeCode=="S") return func(bytes);
         if (this.array) {
             let ret = [];
@@ -190,7 +192,7 @@ class S7Tag extends events {
      * @returns {Array} The Array of bytes conversion
      */
     toBytes(value) {
-        let func = s7comm.DataType.Info[this.typeCode].toBytes;
+        let func = DataType.Info[this.typeCode].toBytes;
         if(this.typeCode=="S") return func(value, this.array);                
         if (this.array) {
             let ret = [];
