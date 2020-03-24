@@ -9,7 +9,7 @@ const DataType = require("./enums/DataType");
 class S7Tag extends events {    
 
     /**
-     * 
+     * The S7Tag constructor
      * @param {number} db The DB number: only if areaCode is DB
      * @param {string} areaCode The string that represent the DataType (necessary)
      * @param {string} typeCode The string that represent the tag's value type (necessary)
