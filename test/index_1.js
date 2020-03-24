@@ -14,8 +14,10 @@ let Db1DbR3600_5 = S7Tag.fromPath("Db1DbR3600_5", "DB1.DBB3600.%5");
 let Db1DbR3600_3 = S7Tag.fromPath("Db1DbR3600_3", "DB1.DBB3600.%3");
 
 let sortedTags = [Db5DbR3600, Db1DbR3600, Db1DbI3628, Db1DbR3600_5, Db1DbS3604, Db1DwR3600, Db1DbR3600_3, Db3DbR3600].sort(S7Tag.sorter);
-console.log(Db1DbR3600);
 console.log(sortedTags);
+console.log(S7Tag.bytesDistance(Db1DbR3600, Db3DbR3600));
+console.log(S7Tag.bytesDistance(Db1DbS3604, Db1DbI3628));
+console.log(S7Tag.bytesDistance(Db1DwR3600, Db1DbR3600_3));
 
 let Db1DbR3600_val = Db1DbR3600.toBytes(445.99886);
 let Db1DbS3604_val = Db1DbS3604.toBytes("CIAO MIRKO!");
