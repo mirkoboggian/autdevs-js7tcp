@@ -219,6 +219,7 @@ class S7Tag extends events {
      * Tags sorter by Device memory position
      * @param {S7Tag} t1 First tag
      * @param {S7Tag} t2 Second tag
+     * @returns {number} The sort result
      */
     static sorter(t1, t2) {
         // DB
@@ -244,6 +245,18 @@ class S7Tag extends events {
         if (t1.array != null && t2.array != null) return t1.array - t2.array; // ascending
         // ELSE
         return 0;
+    }
+
+    /**
+     * Tags sorter by Device memory position
+     * @param {S7Tag} t1 First tag
+     * @param {S7Tag} t2 Second tag
+     * @returns {number} The distance in bytes between tags, null if is not possiible get the distance
+     */
+    static bytesDistance(t1, t2) {
+        if (t1.db != null && t2.db != null && t1.db != t2.db) return null;
+        if (t1.areaCode != t2.areaCode) return null;
+        return t2.offset - t1.offset;
     }
 
 }
