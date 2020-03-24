@@ -1,7 +1,7 @@
 const net = require('net');
 const events = require('events');
 const alock = require('async-lock');
-const s7comm = require("./s7comm");
+const s7comm = require("./s7comm").S7Comm;
 
 // Local Consts
 const MAXPENDING = 10;

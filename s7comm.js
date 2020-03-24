@@ -15,10 +15,6 @@ if (Object.freeze) {
     Object.freeze(MAXWRITEBYTES);
     Object.freeze(MAXITEMSLIST);
 }
-exports.MAXPDUSIZE = MAXPDUSIZE;
-exports.MAXREADBYTES = MAXREADBYTES;
-exports.MAXWRITEBYTES = MAXWRITEBYTES;
-exports.MAXITEMSLIST = MAXITEMSLIST;
 
 /**
  * This class provide the ISO-on-TCP requests/resposne as specified in protocol for:
@@ -513,4 +509,10 @@ class S7Comm {
     }
 }
 
-module.exports = S7Comm;
+module.exports = {
+    S7Comm,
+    MAXPDUSIZE,
+    MAXREADBYTES,
+    MAXWRITEBYTES,
+    MAXITEMSLIST
+}
