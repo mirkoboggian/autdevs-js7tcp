@@ -1,4 +1,5 @@
 const events = require('events');
+const util = require('util');
 const ParameterArea = require("./enums/ParameterArea");
 const DataType = require("./enums/DataType");
 
@@ -17,7 +18,7 @@ class S7Tag extends events {
      * @param {number} array The array size or string length: cannot be used when type is Bit
      */
     constructor(symbol, db, areaCode, typeCode, offset, bit, array) {
-        super(); 
+        super();
         this.symbol = symbol;
         this.db = db ? parseInt(db) : null;
         this.areaCode = areaCode ? areaCode.toUpperCase() : areaCode;
@@ -61,6 +62,15 @@ class S7Tag extends events {
         this.dataType = this.getDataType();
         this.bitsSize = this.getBitsSize();
         this.bytesSize = this.getBytesSize();        
+    }
+
+    /**
+     * S7Tag string to print on console
+     * @param {*} depth 
+     * @param {*} opts 
+     */
+    [util.inspect.custom](depth, opts) {
+        return this.path;
     }
 
     /**
@@ -204,6 +214,38 @@ class S7Tag extends events {
         }
         return func(value);        
     }
+
+    /**
+     * Tags sorter by Device memory position
+     * @param {S7Tag} t1 First tag
+     * @param {S7Tag} t2 Second tag
+     */
+    static sorter(t1, t2) {
+        // DB
+        if (t1.db != null && t2.db == null) return -1;
+        if (t1.db == null && t2.db != null) return 1;
+        if (t1.db != null && t2.db != null && t1.db != t2.db) return t1.db - t2.db; // ascending
+        // AREA
+        if (t1.areaCode < t2.areaCode) return -1;
+        if (t1.areaCode > t2.areaCode) return 1;
+        // OFFSET
+        if (t1.offset < t2.offset) return -1;
+        if (t1.offset > t2.offset) return 1;
+        // TYPE CODE
+        if (t1.typeCode < t2.typeCode) return -1;
+        if (t1.typeCode > t2.typeCode) return 1;
+        // BIT
+        if (t1.bit != null && t2.bit == null) return 1;
+        if (t1.bit == null && t2.bit != null) return -1;
+        if (t1.bit != null && t2.bit != null) return t1.bit - t2.bit; // ascending
+        // ARRAY
+        if (t1.array != null && t2.array == null) return -1;
+        if (t1.array == null && t2.array != null) return 1;
+        if (t1.array != null && t2.array != null) return t1.array - t2.array; // ascending
+        // ELSE
+        return 0;
+    }
+
 }
 
 module.exports = S7Tag;
