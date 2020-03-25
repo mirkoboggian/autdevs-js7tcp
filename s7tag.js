@@ -20,12 +20,12 @@ class S7Tag extends events {
     constructor(symbol, db, areaCode, typeCode, offset, bit, array) {
         super();
         this.symbol = symbol;
-        this.db = db ? parseInt(db) : null;
-        this.areaCode = areaCode ? areaCode.toUpperCase() : areaCode;
-        this.typeCode = typeCode ? typeCode.toUpperCase() : typeCode;
-        this.offset = offset ? parseInt(offset) : null;
-        this.bit = bit ? parseInt(bit) : null;
-        this.array = array ? parseInt(array) : null;
+        this.db = db != null ? parseInt(db) : null;
+        this.areaCode = areaCode != null ? areaCode.toUpperCase() : areaCode;
+        this.typeCode = typeCode != null ? typeCode.toUpperCase() : typeCode;
+        this.offset = offset != null ? parseInt(offset) : null;
+        this.bit = bit != null ? parseInt(bit) : null;
+        this.array = array != null ? parseInt(array) : null;
 
         // area, type and offset must setted!
         if (this.areaCode == null || this.typeCode == null || this.offset == null) {

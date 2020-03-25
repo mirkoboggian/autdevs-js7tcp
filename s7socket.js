@@ -118,7 +118,7 @@ class S7Socket extends events{
             }).then((result) => {
                 this.#onRead(result);
             }).catch((err) => {
-                this.#onError(err); 
+                this.#onError(err);
             });
         }   
     }
