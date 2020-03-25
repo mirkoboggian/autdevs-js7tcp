@@ -17,20 +17,20 @@ if (Object.freeze) {
 }
 
 /**
- * This class provide the ISO-on-TCP requests/resposne as specified in protocol for:
+ * This class provide the ISO-on-TCP requests/response as specified in protocol for:
  * - Connect to device via TCP socket (session and PDU negotiation)
  * - Read (tags)
  * - Write (tags, values)
  */
-class S7Comm {
-
+class S7Comm {    
+    
     /**
      * ISO Connection Request telegram (contains also ISO Header and COTP Header)
      * @param {number} rack CPU Rack number
      * @param {number} slot CPU slot number 
      * @returns {Array} The protocol request to send (Array of bytes)
      */
-    static RegisterSessionRequest = (rack, slot) => {
+    static registerSessionRequest = (rack, slot) => {
         // Consts
         const TPKTLen = 4;
         const COTPLen = 18;
@@ -44,7 +44,7 @@ class S7Comm {
         ret[3] = ((TPKTLen + COTPLen) % 0x100); // Low part of packet lenght (entire frame, payload and TPDU included)
         // COTP (ISO 8073 Header)
         ret[4] = 0x11, // PDU Size Length (Packet length after this byte)
-        ret[5] = 0xE0, // CR - Connection Request ID (TDPU Type CR = Connection Request > see RFC1006/ISO8073)
+        ret[5] = FunctionCode.RegisterSessionReq, // CR - Connection Request ID (TDPU Type CR = Connection Request > see RFC1006/ISO8073)
         ret[6] = 0x00, // Dst Reference HI (TPDU Destination Reference (unknown))
         ret[7] = 0x00, // Dst Reference LO (TPDU Destination Reference (unknown))
         ret[8] = 0x00, // Src Reference HI  (TPDU Source-Reference)
@@ -66,23 +66,10 @@ class S7Comm {
     }
 
     /**
-     * Validate and compute the "register session request" response from CPU
-     * @param {Array} response Array of byte, the response on "register session request"
-     * @returns {Boolean} Response as true or throw as Error
-     */
-    static RegisterSessionResponse = (response) => {
-        if (response.length != 22) {
-            let e = new Error("Error registering session!");
-            throw e;
-        }
-        return true;
-    }
-
-    /**
      * S7 PDU Negotiation Telegram (contains also ISO Header and COTP Header)
      * @returns {Array} The protocol request to send (Array of bytes)
      */
-    static NegotiatePDULengthRequest = (seqNumber = 0) => {
+    static negotiatePDULengthRequest = (seqNumber) => {
         // Consts
         const TPKTLen = 4;
         const COTPLen = 3;
@@ -130,31 +117,11 @@ class S7Comm {
     }
 
     /**
-     * Validate and compute the "negotiate PDU length request" response from CPU
-     * @param {Array} response Array of byte, the response on "negotiate PDU length request"
-     * @returns {Boolean} Response as true or throw as Error
-     */
-    static NegotiatePDULengthResponse = (response, seqNumber = 0) => {
-        // check response length
-        if (response.length != 27) {
-            let e = new Error("Error negotiating PDU!");
-            throw e;
-        }
-        // check sequence number
-        let rcSeqNumber = response[11]*256 + response[12];
-        if (rcSeqNumber != seqNumber) {
-            let e = new Error("Error negotiating PDU: invalid sequence number");
-            throw e;
-        }
-        return true;
-    }
-
-    /**
      * S7 Variable MultiRead full protocol request
      * @param {Array} tags The list of S7Tag to read
      * @returns {Array} The protocol request to send (Array of bytes)
      */
-    static ReadRequest = (tags, seqNumber = 0) => {
+    static readRequest = (tags, seqNumber) => {
         // assert MAXITEMSLIST
         if (tags.length > MAXITEMSLIST) {
             let e = new Error("Tags count is greater than Maximum (" + MAXITEMSLIST + ")");
@@ -180,141 +147,8 @@ class S7Comm {
         return ret;
     }
 
-    /**
-     * Validate and compute the "data read request" response from CPU
-     * @param {Array} tags Array of S7tag
-     * @param {Array} data Array of byte, the response on "data read request"
-     * @returns {Promise} Response as array {Array of S7tag, Array of Array of bytes) or throw as Error
-     */
-    static ReadResponse = (tags, data, seqNumber = 0) => {
-        // assert ISO length
-        if (data.length < 22) {
-            let e = new Error("Error on data bytes read response!");
-            throw e;
-        } 
-        // assert Operation result
-        if (data[17] != 0 || data[18] != 0) {
-            let e = new Error("Read response return an error: " + data[17] + "/" + data[18]);
-            throw e;
-        } 
-        // assert Items Count
-        if (data[20] != tags.length || data[20] > MAXITEMSLIST) {
-            let e = new Error("Read response return invalid items count");
-            throw e;
-        }
-        // check sequence number
-        let rcSeqNumber = data[11]*256 + data[12];
-        if (rcSeqNumber != seqNumber) {
-            let e = new Error("Read response: invalid sequence number");
-            throw e;
-        }
-        // Read data result
-        let results = [];
-        let offset = 21;
-        tags.forEach((tag) => {
-            let normalizeByteSize = tag.bytesSize%2 ? (tag.bytesSize+1) : tag.bytesSize;
-            let tagResponse = data.slice(offset, offset + normalizeByteSize + 4);
-            // assert tag result
-            if (tagResponse[0] != 0xFF) {
-                // Error on read.
-                // add a null in tag value response
-                results.push({Tag: tag, Value: null});
-            }
-            // ATT: in tagResponse[1] there is the DataType to know how to manage the SIZE.
-            // I supposed to read only bytes > the SIZE is in bits
-            let itemBitsLength = tagResponse[2] * 256 + tagResponse[3];
-            let itemBytesLength = itemBitsLength / 8;
-            // assert tag result bytes length
-            if (itemBytesLength != tag.bytesSize) {
-                // Error reading tag bytes size
-                // add a null in tag value response
-                results.push({Tag: tag, Value: null});
-            }
-            // takes value
-            let tagValue = tagResponse.slice(4, 4 + tag.bytesSize);
-            results.push({Tag: tag, Value: Uint8Array.from(tagValue)});
-            offset += normalizeByteSize + 4;
-        });
-        return results;
-    }
-
-    /**
-     * S7 Variable MultiWrite full protocol request 
-     * @param {Array} tags The list of S7Tag to write
-     * @param {Array} values The list of value to write
-     * @returns {Array} The protocol request to send (Array of bytes)
-     */
-    static WriteRequest = (tags, values, seqNumber = 0) => {
-        // assert tags count and values count
-        if (tags.length != values.length) {
-            let e = new Error("Tags count (" + tags.length + ") different from values count (" + values.length + ")");
-            throw e;
-        }
-        // assert MAXITEMSLIST
-        if (tags.length > MAXITEMSLIST) {
-            let e = new Error("Tags count is greater than Maximum (" + MAXITEMSLIST + ")");
-            throw e;
-        }
-        // assert MAXWRITEBYTES
-        let totalLength = tags.reduce((total, item) => total + (item['bytesSize'] || 0), 0);
-        if (totalLength > MAXWRITEBYTES) {
-            let e = new Error("Tags total length is greater than Maximum (" + MAXWRITEBYTES + ")");
-            throw e;
-        }
-        // Request
-        let ret = [];
-        // Header
-        ret = ret.concat(this.#writeHeaderRequest(values, seqNumber));
-        // Items Add
-        let itemsCount = tags.length;
-        for(let i = 0; i < itemsCount; i++) {
-            let item = tags[i];
-            let itemRequest = this.#writeItemRequest(item.parameterArea, item.db, item.offset, item.bytesSize, false);
-            ret = ret.concat(itemRequest);
-        }
-        // Values Add
-        for(let i = 0; i < itemsCount; i++) {
-            let itemValue = values[i];
-            let itemValueRequest = this.#writeItemValuesRequest(itemValue);
-            ret = ret.concat(itemValueRequest);
-        }
-        return ret;
-    }
-
-    /**
-     * Validate and compute the "data write request" response from CPU
-     * @param {Array} tags Array of S7tag
-     * @param {Array} data Array of byte, the response on "data write request"
-     * @returns {Promise} Response as array {Array of S7tag, Array of return code) or throw as Error
-     */
-    static WriteResponse = (tags, data, seqNumber = 0) => {
-        // assert Operation result
-        if (data[17] != 0 || data[18] != 0) {
-            let e = new Error("Write response return an error: " + data[17] + "/" + data[18]);
-            throw e;
-        } 
-        // assert Items Count
-        if (data[20] != tags.length || data[20] > MAXITEMSLIST) {
-            let e = new Error("Write response return invalid items count");
-            throw e;
-        }
-        // check sequence number
-        let rcSeqNumber = data[11]*256 + data[12];
-        if (rcSeqNumber != seqNumber) {
-            let e = new Error("Write response: invalid sequence number");
-            throw e;
-        }
-        let results = [];
-        let offset = 21;
-        tags.forEach((tag) => {
-            results.push({Tag: tag, Value: data[offset]});
-            offset += 1;
-        });
-        return results;
-    }
-
     // S7 Variable MultiRead Header
-    static #readHeaderRequest = (itemsCount, seqNumber = 0) => {
+    static #readHeaderRequest = (itemsCount, seqNumber) => {
         // Consts
         const TPKTLen = 4;
         const COTPLen = 3;
@@ -396,8 +230,51 @@ class S7Comm {
         return ret;
     }
 
+    /**
+     * S7 Variable MultiWrite full protocol request 
+     * @param {Array} tags The list of S7Tag to write
+     * @param {Array} values The list of value to write
+     * @returns {Array} The protocol request to send (Array of bytes)
+     */
+    static writeRequest = (tags, values, seqNumber) => {
+        // assert tags count and values count
+        if (tags.length != values.length) {
+            let e = new Error("Tags count (" + tags.length + ") different from values count (" + values.length + ")");
+            throw e;
+        }
+        // assert MAXITEMSLIST
+        if (tags.length > MAXITEMSLIST) {
+            let e = new Error("Tags count is greater than Maximum (" + MAXITEMSLIST + ")");
+            throw e;
+        }
+        // assert MAXWRITEBYTES
+        let totalLength = tags.reduce((total, item) => total + (item['bytesSize'] || 0), 0);
+        if (totalLength > MAXWRITEBYTES) {
+            let e = new Error("Tags total length is greater than Maximum (" + MAXWRITEBYTES + ")");
+            throw e;
+        }
+        // Request
+        let ret = [];
+        // Header
+        ret = ret.concat(this.#writeHeaderRequest(values, seqNumber));
+        // Items Add
+        let itemsCount = tags.length;
+        for(let i = 0; i < itemsCount; i++) {
+            let item = tags[i];
+            let itemRequest = this.#writeItemRequest(item.parameterArea, item.db, item.offset, item.bytesSize, false);
+            ret = ret.concat(itemRequest);
+        }
+        // Values Add
+        for(let i = 0; i < itemsCount; i++) {
+            let itemValue = values[i];
+            let itemValueRequest = this.#writeItemValuesRequest(itemValue);
+            ret = ret.concat(itemValueRequest);
+        }
+        return ret;
+    }
+
     // S7 Variable MultiRead Header
-    static #writeHeaderRequest = (itemsValues, seqNumber = 0) => {
+    static #writeHeaderRequest = (itemsValues, seqNumber) => {
         // Analize values
         let itemsCount = itemsValues.length;
         let itemsLen = 0;
@@ -507,6 +384,151 @@ class S7Comm {
         // Return
         return ret;
     }
+
+    /**
+     * This function takes split a buffer of receive bytes in responses adorned with info
+     * @param {Array} buffer as array of bytes to parse 
+     * @return {Array} Array of responses object {type, code, seqNumber, array of data}
+     */
+    static getResponses(buffer) {
+        let results = [];
+        let currentOffset = 0;
+        let bufferLength = buffer.length;        
+        
+        while(currentOffset < bufferLength) {    
+            // parse result
+            let respLength = buffer[currentOffset + 2] * 256 + buffer[currentOffset + 3];
+            let respBuffer = buffer.slice(currentOffset, currentOffset + respLength);
+            let respType = respBuffer[5];
+            let respSeqNumber = respBuffer[11] * 256 + respBuffer[12];
+            let respCode = respType == FunctionCode.RegisterSessionResp ? FunctionCode.RegisterSessionResp :respBuffer[19];            
+            
+            results.push({                
+                type: respType,
+                code: respCode,
+                seqNumber: respSeqNumber,
+                data: respBuffer
+            });
+
+            currentOffset += respLength;
+        }
+        return results;
+    }
+
+    /**
+     * Validate and compute the "register session request" response from CPU
+     * Response Type: FunctionCode.RegisterSessionResp = 0xD0
+     * Response Code: FunctionCode.RegisterSessionResp = 0xD0 (forced)
+     * @param {Array} response Array of byte, the response on "register session request"
+     * @returns {Boolean} Response as true or throw as Error
+     */
+    static registerSessionResponse = (response) => {
+        if (response.length != 22) {
+            let e = new Error("Error registering session!");
+            throw e;
+        }
+        return true;
+    }
+
+    /**
+     * Validate and compute the "negotiate PDU length request" response from CPU
+     * Response Type: FunctionCode.OpenS7Connection = 0xF0
+     * Response Code: FunctionCode.OpenS7Connection = 0xF0
+     * @param {Array} response Array of byte, the response on "negotiate PDU length request"
+     * @returns {Boolean} Response as true or throw as Error
+     */
+    static negotiatePDULengthResponse = (response) => {
+        // check response length
+        if (response.length != 27) {
+            let e = new Error("Error negotiating PDU!");
+            throw e;
+        }
+        return true;
+    }
+
+    /**
+     * Validate and compute the "data read request" response from CPU
+     * Response Type: FunctionCode.OpenS7Connection = 0xF0
+     * Response Code: FunctionCode.Read = 0x04
+     * @param {Array} tags Array of S7tag
+     * @param {Array} data Array of byte, the response on "data read request"
+     * @returns {Object} Response as array of object of { S7tag, Value } or throw as Error
+     */
+    static readResponse = (tags, data) => {
+        // assert ISO length
+        if (data.length < 22) {
+            let e = new Error("Error on data bytes read response!");
+            throw e;
+        } 
+        // assert Operation result
+        if (data[17] != 0 || data[18] != 0) {
+            let e = new Error("Read response return an error: " + data[17] + "/" + data[18]);
+            throw e;
+        } 
+        // assert Items Count
+        if (data[20] != tags.length || data[20] > MAXITEMSLIST) {
+            let e = new Error("Read response return invalid items count");
+            throw e;
+        }
+        // Read data result
+        let results = [];
+        let offset = 21;
+        tags.forEach((tag) => {
+            let normalizeByteSize = tag.bytesSize%2 ? (tag.bytesSize+1) : tag.bytesSize;
+            let tagResponse = data.slice(offset, offset + normalizeByteSize + 4);
+            // assert tag result
+            if (tagResponse[0] != 0xFF) {
+                // Error on read.
+                // add a null in tag value response
+                results.push({Tag: tag, Value: null});
+            }
+            // ATT: in tagResponse[1] there is the DataType to know how to manage the SIZE.
+            // I supposed to read only bytes > the SIZE is in bits
+            let itemBitsLength = tagResponse[2] * 256 + tagResponse[3];
+            let itemBytesLength = itemBitsLength / 8;
+            // assert tag result bytes length
+            if (itemBytesLength != tag.bytesSize) {
+                // Error reading tag bytes size
+                // add a null in tag value response
+                results.push({Tag: tag, Value: null});
+            }
+            // takes value
+            let tagValue = tagResponse.slice(4, 4 + tag.bytesSize);
+            results.push({Tag: tag, Value: Uint8Array.from(tagValue)});
+            offset += normalizeByteSize + 4;
+        });
+        return results;
+    }
+
+    /**
+     * Validate and compute the "data write request" response from CPU
+     * Response Type: FunctionCode.OpenS7Connection = 0xF0
+     * Response Code: FunctionCode.Write = 0x05
+     * @param {Array} tags Array of S7tag
+     * @param {Array} data Array of byte, the response on "data write request"
+     * @returns {Object} Response as array of object of {S7tag, code} or throw as Error
+     */
+    static writeResponse = (tags, data) => {
+        // assert Operation result
+        if (data[17] != 0 || data[18] != 0) {
+            let e = new Error("Write response return an error: " + data[17] + "/" + data[18]);
+            throw e;
+        } 
+        // assert Items Count
+        if (data[20] != tags.length || data[20] > MAXITEMSLIST) {
+            let e = new Error("Write response return invalid items count");
+            throw e;
+        }
+        let results = [];
+        let offset = 21;
+        tags.forEach((tag) => {
+            results.push({Tag: tag, Value: data[offset]});
+            offset += 1;
+        });
+        return results;
+    }
+
+
 }
 
 module.exports = {

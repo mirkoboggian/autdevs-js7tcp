@@ -1,14 +1,7 @@
 const net = require('net');
 const events = require('events');
-const alock = require('async-lock');
 const { S7Comm } = require("./s7comm");
-
-// Local Consts
-const MAXPENDING = 10;
-if (Object.freeze) {
-    Object.freeze(MAXPENDING);
-}
-exports.MAXPENDING = MAXPENDING;
+const FunctionCode = require("./enums/FunctionCode")
 
 /**
  * S7Socket Class encapsulate a TCP single socket to manage connection to device, read tags and write tags.
@@ -26,24 +19,31 @@ class S7Socket extends events{
      * @param {number} timeout milliseconds of socket inactivity before close
      * @param {number} rwTimeout milliseconds of waiting before acquire socket's lock for read/write operations
      */
-    constructor(ip = "127.0.0.1", port = 102, rack = 0, slot = 2, autoreconnect = 10000, timeout = 60000, rwTimeout = 5000) {  
-        super();        
+    constructor(ip = "127.0.0.1", port = 102, rack = 0, slot = 2, autoreconnect = 10000, timeout = 60000) {          
+        // Events
+        super();                
+        // Local settigns
         this.ip = ip;
         this.port = port;
         this.rack = rack;
         this.slot = slot;        
         this.autoreconnect = autoreconnect;
-        this.timeout = timeout;
-        this.rwTimeout = rwTimeout;
-
-        this.lock = new alock({timeout: this.rwTimeout, maxPending: this.MAXPENDING});
-
-        // internal use
+        this.timeout = timeout;         
+        // Default settings  
         this.connecting = false;
-        this.reconnectIntervall = null;
-        if(this.autoreconnect > 0) {
-            this.#autoreconnect();
-        }        
+        this.sequenceNumber = 0;
+        this.pendingRequests = [];
+        // TCP socket + events subscriptions
+        this.socket = new net.Socket();
+        this.socket.on('close', this.#onClose);
+        this.socket.on('connect', this.#onConnect);
+        this.socket.on('data', this.#onData);
+        this.socket.on('drain', this.#onDrain);
+        this.socket.on('end', this.#onEnd);
+        this.socket.on('error', this.#onError);
+        this.socket.on('lookup', this.#onLookup);
+        this.socket.on('ready', this.#onReady);
+        this.socket.on('timeout', this.#onTimeout);
     }
     
     /**
@@ -54,15 +54,14 @@ class S7Socket extends events{
     static fromConfig(config) {
         try {
             let s7socket = new S7Socket(config.ip, config.port, config.rack, 
-                config.slot, config.autoreconnect, config.timeout, config.rwTimeout);
+                config.slot, config.autoreconnect, config.timeout);
             return s7socket;
         } catch(e) {
             let err = new Error("This config is not a valid config for S7socket.", e.message);
             throw err;
         }
     }
-
-    sequenceNumber = 0;
+    
     /**
      * Generate a Sequence number for connect/read/write request 
      * @returns {Number} the next sequence number
@@ -73,338 +72,221 @@ class S7Socket extends events{
     }
 
     /**
-     * Try to connect the Socket to CPU     
+     * 
      */
-    async connect() {
-        this.connecting = true;
-        this.#connect().then(() => {
-            this.connecting = false;
-            this.#onConnect();
-        }).catch((e) => {
-            this.connecting = false;
-            this.#onError(e);
-        });        
+    connect = () => {
+        this.socket.connect( { port: this.port, host: this.ip });
     }
 
-    #autoreconnect = () => {
-        this.connect();
-        this.reconnectIntervall = setInterval(() => {
-            if (!this.connected() && !this.connecting) {
-                this.connect();
-            }
-        }, this.autoreconnect);
-    }
 
     /**
-     * Check if S7socket is connected
-     * @returns {Boolean} 'true' if connect, else 'false'
+     * Send RegisterSession Request to server
      */
-    connected() {
-        return (this._socket && this._socket.readyState == "open");
-    }
-
-    /**
-     * Read from S7 CPU a list of tags (MAX. 20 tags)
-     * @param {Array} tags The array of S7Tags to read
-     * @returns {Array} Array of Tags and their values
-         */
-    read(tags) {
-        if (!this.connected()) {
-            let e = new Error("Invalid socket status.");
-            this.#onError(e);
-        } else {
-            this.lock.acquire('socket', async() => {
-                return await this.#read(tags);
-            }).then((result) => {
-                this.#onRead(result);
-            }).catch((err) => {
-                this.#onError(err);
+    #registerSessionRequest = () => {
+        let request = Uint8Array.from(S7Comm.registerSessionRequest(this.rack, this.slot));
+        this.socket.write(request, (error) => {
+            if (error) this.#onError(error);
+            this.pendingRequests.push({                
+                type: FunctionCode.RegisterSessionReq,
+                seqNumber: null,
+                tags: null
             });
-        }   
+        });
     }
 
     /**
-     * Write to S7 CPU a list of tags/values (MAX. 20 tags)
-     * @param {Array} tags The array of S7Tags to write
-     * @param {Array} values The array of values to write
-     * @returns {Array} Array of Tags and their write results
+     * Send NegotiatePDULength Request to server
      */
-    write(tags, values) {
-        if (!this.connected()) {
-            let e = new Error("Invalid socket status.");
-            this.#onError(e);
-        } else {
-            this.lock.acquire('socket', async() => {
-                return await this.#write(tags, values);
-            }, {skipQueue: true}).then((result) => {
-                this.#onWrite(result);
-            }).catch((err) => {
-                this.#onError(err); 
+    #negotiatePDULengthRequest = () => {
+        let mySeqNumber = this.#nextSequenceNumber();
+        let request = Uint8Array.from(S7Comm.negotiatePDULengthRequest(mySeqNumber));
+        this.socket.write(request, (error) => {
+            if (error) this.#onError(error);
+            this.pendingRequests.push({                
+                type: FunctionCode.OpenS7Connection,
+                seqNumber: mySeqNumber,
+                tags: null
             });
-        }
+        });
     }
 
     /**
-     * This function send a message to socket and return the response.
-     * @param {Array} sendMessage Array of bytes to send through the socket
-     * @returns {Promise} Response as Array of bytes or Reject as Error
+     * Send Read Request to server
+     * @param {Array} tags The list of S7Tag to read
      */
-    #socketSendReceive = (sendMessage) => {
-        let self = this;
-        return new Promise((resolve, reject) => {
-            // check socket status
-            if (!self.connected()) {
-                let e = new Error("Socket not connected");
-                reject(e);
-            }
-            let onData = (buffer) => {
-                self._socket.off("error", onError);
-                resolve(buffer);
-            }
-            let onError = (e) => {
-                self._socket.off("data", onData);
-                reject(e);                
-            }
-            self._socket.once("error", onError);
-            self._socket.once("data", onData);
-            self._socket.write(sendMessage, (e) => {
-                // write done, check for errors
-                if (e != null) {
-                    reject(e);
+    read = (tags) => {
+        let mySeqNumber = this.#nextSequenceNumber();
+        let request = Uint8Array.from(S7Comm.readRequest(tags, mySeqNumber));
+        this.socket.write(request, (error) => {
+            if (error) this.#onError(error);
+            this.pendingRequests.push({                
+                type: FunctionCode.Read,
+                seqNumber: mySeqNumber,
+                tags: tags
+            });
+        });
+    }
+
+    /**
+     * Send Write Request to server
+     * @param {Array} tags The list of S7Tag to read
+     * @param {Array} values The list of value to write
+     */
+    write = (tags, values) => {
+        let mySeqNumber = this.#nextSequenceNumber();
+        let request = Uint8Array.from(S7Comm.writeRequest(tags, values, mySeqNumber));
+        this.socket.write(request, (error) => {
+            if (error) this.#onError(error);
+            this.pendingRequests.push({                
+                type: FunctionCode.Write,
+                seqNumber: mySeqNumber,
+                tags: tags
+            });
+        });
+    }
+
+    /**
+     * Analyse data received in socket buffer
+     */
+    #evaluateBuffer = (buffer) => {
+        let responses = S7Comm.getResponses(buffer);
+        responses.forEach(response => {
+            
+            try {
+                // read response info            
+                let type = response.type;
+                let code = response.code;
+                let seqNumber = response.seqNumber;
+                let data = response.data;
+                // common data
+                let reqIndex, request, result;
+                // manage response
+                switch(code) {
+                    case FunctionCode.RegisterSessionResp:
+                        reqIndex = this.pendingRequests.findIndex(req => req.type == FunctionCode.RegisterSessionReq);
+                        request = this.pendingRequests.splice(reqIndex, 1)[0];
+                        result = S7Comm.registerSessionResponse(data);
+                        if (result) this.#negotiatePDULengthRequest();
+                        break;
+                    case FunctionCode.OpenS7Connection:
+                        reqIndex = this.pendingRequests.findIndex(req => req.type == code && req.seqNumber == seqNumber);
+                        request = this.pendingRequests.splice(reqIndex, 1)[0];
+                        result = S7Comm.negotiatePDULengthResponse(data);
+                        if (result) this.#emitConnect(seqNumber);
+                        break;
+                    case FunctionCode.Read:
+                        reqIndex = this.pendingRequests.findIndex(req => req.type == code && req.seqNumber == seqNumber);
+                        request = this.pendingRequests.splice(reqIndex, 1)[0];
+                        result = S7Comm.readResponse(request.tags, data);
+                        this.#emitRead(seqNumber, result);
+                        break;
+                    case FunctionCode.Write:
+                        reqIndex = this.pendingRequests.findIndex(req => req.type == code && req.seqNumber == seqNumber);
+                        request = this.pendingRequests.splice(reqIndex, 1)[0];
+                        result = S7Comm.writeResponse(request.tags, data);
+                        this.#emitWrite(seqNumber, result);
+                        break;
+                    default:
+                        break;
                 }
-            })
+            } catch (error) {
+                this.#onError(error);
+            }
+            
         });
     }
 
-    /**
-     * This function try to open the socket communication.
-     * @returns {Promise} Response as readyState or Reject as Error
-     */
-    #openSocket = () => {
-        let self = this;
-        return new Promise((resolve, reject) => {
-            // if socket already exists destroy it
-            if (self._socket) {
-                self._socket.removeAllListeners();
-                self._socket.destroy();
-            } 
-            // new socket instance
-            self._socket = new net.Socket();
-            self._socket.setTimeout(self.timeout);
-            self._socket.setKeepAlive(true, self.timeout); 
-            let onceSocketError = (e) => { 
-                reject(e); 
-            }
-            let onSocketConnect = () => {
-                self._socket.off('error', onceSocketError);
-                resolve(self._socket.readyState);
-            }
-            self._socket.once('error', onceSocketError);
-            self._socket.connect(self.port, self.ip, onSocketConnect);
-        });
+    #emitConnect = (seqNumber) => {
+        this.emit('connect', seqNumber)
+    }
+
+    #emitRead = (seqNumber, result) => {
+        this.emit('read', result, seqNumber);
+    }
+
+    #emitWrite = (seqNumber, result) => {
+        this.emit('write', result, seqNumber);
     }
 
     /**
-     * This function try to register session to device
-     * @returns {Promise} Response as true or Reject as Error
+     * Emitted once the socket is fully closed. 
+     * @param {string} hadError boolean which says if the socket was closed due to a transmission error
      */
-    #registerSession = () => {
-        let self = this;
-        return new Promise(async (resolve, reject) => {
-            let request = Uint8Array.from(S7Comm.RegisterSessionRequest(self.rack, self.slot));
-            try {
-                let registerSessionResponse = await self.#socketSendReceive(request);
-                let response = Uint8Array.from(registerSessionResponse);
-                let result = S7Comm.RegisterSessionResponse(response);
-                resolve(result);
-            } catch (e) {
-                reject(e);
-            }
-        });
+    #onClose = (hadError) => {
+        if (hadError) console.error("Socket closed with errors!");
+        else console.warn("Scoket closed!");
     }
 
     /**
-     * This function try to negotiate PDU with device
-     * @returns {Promise} Response as true or Reject as Error
+     * Emitted when a socket connection is successfully established
      */
-    #NegotiatePDULength = () => {
-        let self = this;
-        return new Promise(async (resolve, reject) => {
-            let seqNumber = self.#nextSequenceNumber();
-            let request = Uint8Array.from(S7Comm.NegotiatePDULengthRequest(seqNumber));
-            try {
-                let negotiatePDULengthResponse = await self.#socketSendReceive(request);
-                let response = Uint8Array.from(negotiatePDULengthResponse);
-                let result = S7Comm.NegotiatePDULengthResponse(response, seqNumber);
-                resolve(result);
-            } catch (e) {
-                reject(e);
-            }
-        });
-    }
-
-    /**
-     * This function try to connect, register session and negotiate PDU with device
-     * @returns {Promise} Response as true or Reject as Error
-     */
-    #connect = () => {
-        let self = this;
-        return new Promise(async (resolve, reject) => {
-            try {
-                await self.#openSocket();
-                await self.#registerSession();
-                await self.#NegotiatePDULength();
-                resolve(true);
-            } catch (e) {
-                reject(e);
-            }
-        });
-    }
-
-    /**
-     * This function send a data read request
-     * @param {Array} tags Array of S7tag
-     * @returns {Promise} Response as array of bytes or Reject as Error
-     */
-    #readSendRequest = (tags, seqNumber) => {
-        let self = this;
-        return new Promise(async (resolve, reject) => {
-            let request = Uint8Array.from(S7Comm.ReadRequest(tags, seqNumber));
-            // ATT! important to register on socket error too!
-            // If n error on socket occour the lock is never release
-            // To avoid too many listener Error remove it before return promise
-            let onceSocketError = (e) => { reject(e); }
-            self._socket.once('error', onceSocketError);
-            try {
-                let readRequestResponse = await self.#socketSendReceive(request);                
-                self._socket.off('error', onceSocketError);
-                resolve(readRequestResponse);
-            } catch (e) {
-                self._socket.off('error', onceSocketError);
-                reject(e);
-            }
-        })
-    }
-
-    /**
-     * This function capture data after a read request
-     * @param {Array} tags Array of S7tag
-     * @param {Array} data Array of byte
-     * @returns {Promise} Response as array {S7tag, Array of bytes) or Reject as Error
-     */
-    #readSendResponse = (tags, data, seqNumber) => {
-        let self = this;
-        return new Promise((resolve, reject) => {
-            try {
-                let results = S7Comm.ReadResponse(tags, data, seqNumber);
-                resolve(results);
-            } catch(e) {
-                reject(e);
-            }         
-        });
-    }
-
-    /**
-     * This function send a data read request and return data in Raw format
-     * @param {Array} tags Array of S7tag
-     * @returns {Promise} Response as array {S7tag, value) or Reject as Error
-     */
-    #read = (tags) => {    
-        let self = this;
-        return new Promise(async (resolve, reject) => {
-            try {
-                let seqNumber = self.#nextSequenceNumber();
-                let dataRead = await self.#readSendRequest(tags, seqNumber);
-                let result = await self.#readSendResponse(tags, dataRead, seqNumber);
-                resolve(result);
-            } catch (e) {
-                reject(e);
-            }
-        }); 
-    }
-
-    /**
-     * This function send a data write request
-     * @param {Array} tags Array of S7tag
-     * @param {Array} values Array of Array of byte
-     * @returns {Promise} Response as true or Reject as Error
-     */
-    #writeSendRequest = (tags, values, seqNumber) => {
-        let self = this;
-        return new Promise(async (resolve, reject) => {
-            let request = Uint8Array.from(S7Comm.WriteRequest(tags, values, seqNumber));
-            // ATT! important to register on socket error too!
-            // If n error on socket occour the lock is never release
-            // To avoid too many listener Error remove it before return promise
-            let onceSocketError = (e) => { reject(e); }
-            self._socket.once('error', onceSocketError);
-            try {
-                let writeRequestResponse = await self.#socketSendReceive(request);                
-                self._socket.off('error', onceSocketError);
-                resolve(writeRequestResponse);
-            } catch (e) {
-                self._socket.off('error', onceSocketError);
-                reject(e);
-            }
-        })
-    }
-
-    /**
-     * This function capture data after a read request
-     * @param {Array} tags Array of S7tag
-     * @param {Array} data Array of byte
-     * @returns {Promise} Response as array {S7tag, Byte) or Reject as Error
-     */
-    #writeSendResponse = (tags, data, seqNumber)  => {
-        let self = this;
-        return new Promise((resolve, reject) => {
-            try {
-                let results = S7Comm.WriteResponse(tags, data, seqNumber);
-                resolve(results);
-            } catch(e) {
-                reject(e);
-            }         
-        });
-    }
-
-    /**
-     * This function capture data after a read request
-     * @param {Array} tags Array of S7tag
-     * @param {Array} values Array of Array of byte
-     * @returns {Promise} Response as array {S7tag, Byte) or Reject as Error
-     */
-    #write = (tags, values) => {
-        let self = this;
-        return new Promise(async (resolve, reject) => {
-            try {
-                let seqNumber = self.#nextSequenceNumber();
-                let dataRead = await self.#writeSendRequest(tags, values, seqNumber);
-                let result = await self.#writeSendResponse(tags, dataRead, seqNumber);
-                resolve(result);
-            } catch (e) {
-                reject(e);
-            }
-        }); 
-    }
-
     #onConnect = () => {
-        this.emit('connect');
+        console.info("Socket connected!");
+        this.#registerSessionRequest();        
     }
 
-    #onRead = (results) => {
-        this.emit('read', results);
+    /**
+     * Emitted when data is received
+     * @param {Buffer|string} data data received
+     */
+    #onData = (data) => {
+        console.info("New data received!");
+        this.#evaluateBuffer(data);
     }
 
-    #onWrite = (results) => {
-        this.emit('write', results);
+    /**
+     * Emitted when the write buffer becomes empty
+     */
+    #onDrain = () => {
+        console.info("Socket send buffer drained!");
     }
 
-    #onError = (error) => {        
-        this.lock = new alock({timeout: this.rwTimeout, maxPending: this.MAXPENDING});
-        this._socket.destroy();
-        this.connecting = false;
-        this.emit('error', error);
+    /**
+     * Emitted when the other end of the socket sends a FIN packet, thus ending the readable side of the socket.
+     */
+    #onEnd = () => {
+        console.warn("Socket closed by server");
+    }
+
+    /**
+     * Emitted when an error occurs. 
+     * The 'close' event will be called directly following this event.
+     * @param {Error} error The error object
+     */
+    #onError = (error) => {
+        console.error(error);
+    }
+
+    /**
+     * Emitted after resolving the host name but before connecting. 
+     * Not applicable to Unix sockets.
+     * @param {Error} error The error object
+     * @param {string} address The IP address.
+     * @param {string|null} family The address type
+     * @param {string} host The host name.
+     */
+    #onLookup = (error, address, family, host) => {
+        console.warn(`Lookup: ${error}, ${address}, ${family}, ${host}, `);
+    }
+
+    /**
+     * Emitted when a socket is ready to be used. 
+     * Triggered immediately after 'connect'.
+     */
+    #onReady = () => {
+        console.info("Socket is ready!");
+    }
+
+    /**
+     * Emitted if the socket times out from inactivity. 
+     * This is only to notify that the socket has been idle. 
+     * The user must manually close the connection.
+     */
+    #onTimeout= () => {
+        console.error("Socket timeout!");
     }
 }
 
-module.exports = S7Socket;
+module.exports = {
+    S7Socket
+}

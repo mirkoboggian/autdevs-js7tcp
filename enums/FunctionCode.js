@@ -1,4 +1,6 @@
 var FunctionCode = {
+    RegisterSessionResp: 0xD0,
+    RegisterSessionReq: 0xE0,
     OpenS7Connection: 0xF0,
     Read: 0x04,
     Write: 0x05,
