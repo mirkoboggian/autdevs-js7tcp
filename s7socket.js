@@ -1,7 +1,7 @@
 const net = require('net');
 const events = require('events');
 const alock = require('async-lock');
-const s7comm = require("./s7comm").S7Comm;
+const { S7Comm } = require("./s7comm");
 
 // Local Consts
 const MAXPENDING = 10;
@@ -211,11 +211,11 @@ class S7Socket extends events{
     #registerSession = () => {
         let self = this;
         return new Promise(async (resolve, reject) => {
-            let request = Uint8Array.from(s7comm.RegisterSessionRequest(self.rack, self.slot));
+            let request = Uint8Array.from(S7Comm.RegisterSessionRequest(self.rack, self.slot));
             try {
                 let registerSessionResponse = await self.#socketSendReceive(request);
                 let response = Uint8Array.from(registerSessionResponse);
-                let result = s7comm.RegisterSessionResponse(response);
+                let result = S7Comm.RegisterSessionResponse(response);
                 resolve(result);
             } catch (e) {
                 reject(e);
@@ -231,11 +231,11 @@ class S7Socket extends events{
         let self = this;
         return new Promise(async (resolve, reject) => {
             let seqNumber = self.#nextSequenceNumber();
-            let request = Uint8Array.from(s7comm.NegotiatePDULengthRequest(seqNumber));
+            let request = Uint8Array.from(S7Comm.NegotiatePDULengthRequest(seqNumber));
             try {
                 let negotiatePDULengthResponse = await self.#socketSendReceive(request);
                 let response = Uint8Array.from(negotiatePDULengthResponse);
-                let result = s7comm.NegotiatePDULengthResponse(response, seqNumber);
+                let result = S7Comm.NegotiatePDULengthResponse(response, seqNumber);
                 resolve(result);
             } catch (e) {
                 reject(e);
@@ -269,7 +269,7 @@ class S7Socket extends events{
     #readSendRequest = (tags, seqNumber) => {
         let self = this;
         return new Promise(async (resolve, reject) => {
-            let request = Uint8Array.from(s7comm.ReadRequest(tags, seqNumber));
+            let request = Uint8Array.from(S7Comm.ReadRequest(tags, seqNumber));
             // ATT! important to register on socket error too!
             // If n error on socket occour the lock is never release
             // To avoid too many listener Error remove it before return promise
@@ -296,7 +296,7 @@ class S7Socket extends events{
         let self = this;
         return new Promise((resolve, reject) => {
             try {
-                let results = s7comm.ReadResponse(tags, data, seqNumber);
+                let results = S7Comm.ReadResponse(tags, data, seqNumber);
                 resolve(results);
             } catch(e) {
                 reject(e);
@@ -332,7 +332,7 @@ class S7Socket extends events{
     #writeSendRequest = (tags, values, seqNumber) => {
         let self = this;
         return new Promise(async (resolve, reject) => {
-            let request = Uint8Array.from(s7comm.WriteRequest(tags, values, seqNumber));
+            let request = Uint8Array.from(S7Comm.WriteRequest(tags, values, seqNumber));
             // ATT! important to register on socket error too!
             // If n error on socket occour the lock is never release
             // To avoid too many listener Error remove it before return promise
@@ -359,7 +359,7 @@ class S7Socket extends events{
         let self = this;
         return new Promise((resolve, reject) => {
             try {
-                let results = s7comm.WriteResponse(tags, data, seqNumber);
+                let results = S7Comm.WriteResponse(tags, data, seqNumber);
                 resolve(results);
             } catch(e) {
                 reject(e);

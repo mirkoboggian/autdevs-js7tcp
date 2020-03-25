@@ -248,7 +248,7 @@ class S7Tag extends events {
     }
 
     /**
-     * Tags sorter by Device memory position
+     * Tags distance in bytes (memory offset position)
      * @param {S7Tag} t1 First tag
      * @param {S7Tag} t2 Second tag
      * @returns {number} The distance in bytes between tags, null if is not possiible get the distance

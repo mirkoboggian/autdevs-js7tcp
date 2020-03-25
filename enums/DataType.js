@@ -9,6 +9,7 @@ const getStringSize = (len) => { return 8 * (len + 2);}
 //#region Null
 const RetNull = () => {return null}
 //#endregion
+
 //#region Conversions to Bytes
 const ByteToBytes = (val) => {
   let buf = new Buffer.alloc(1);
@@ -65,6 +66,7 @@ const StringToBytes = (val, maxLen) => {
   return buf;
 };
 //#endregion
+
 //#region Bytes to Type
 const BytesToByte = (array) => {
   return array[0];
@@ -135,7 +137,7 @@ var DataType = {
     Real: 0x06,            
     Counter: 0x1C,
     Timer: 0x1D,
-    String: 0xFF, // NOT DEFINE IN S7 PROTOCOL
+    String: 0xFF, // NOT DEFINED IN S7 PROTOCOL
     // Utils
     Info: {
       "%":  {index: 0x01, name: "Bit",      size: get8BitSize,    toBytes: RetNull,       fromBytes: RetNull,        default: 0x00  }, // S7 sends 1 byte per bit
