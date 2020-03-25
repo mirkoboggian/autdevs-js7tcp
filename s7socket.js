@@ -72,7 +72,7 @@ class S7Socket extends events{
     }
 
     /**
-     * 
+     * Open connection to socket
      */
     connect = () => {
         this.socket.connect( { port: this.port, host: this.ip });
