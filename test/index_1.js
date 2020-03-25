@@ -30,11 +30,11 @@ s7socket.on('connect', (seqNumber) => {
 
     setInterval(() => {
         s7socket.write(tags, values);
-    }, 1000);
+    }, 100);
 
     setInterval(() => {
         s7socket.read(tags);
-    }, 1000);
+    }, 100);
         
 });
 
