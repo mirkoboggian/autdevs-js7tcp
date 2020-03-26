@@ -42,6 +42,8 @@ node_modules/
 jspm_packages/
 jsdoc/
 
+# MacOSX
+.DS_Store
 
 # TypeScript v1 declaration files
 typings/
