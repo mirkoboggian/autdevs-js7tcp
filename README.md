@@ -1,6 +1,6 @@
 # S7Tcp
 **S7TCP** permette di scambiare dati "non ottimizzati" in lettura/scrittura con alcuni modelli dei PLC Siemens (S7300/400, S71200/1500).
-Il progetto è stato creato e testato su MacOSX utilizzando Visual Studio Code.
+Il progetto è stato creato e testato su MacOSX utilizzando Visual Studio Code e non utilizza alcun package esterno.
 
 ## Caratteristiche del driver
 La base di questo progetto è un mio progetto C# sviluppato circa 10 anni fa e realizzato semplicemente tramite Reverse-Engineering. 
