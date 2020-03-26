@@ -51,7 +51,7 @@ Le proprietà permettono anche di creare elenchi/gruppi ordinati di Tag ordinati
 * Non si possono fare Array di Bit
 * Non si possono fare Array di String
 
-### Creare istanze tramite configurazione
+### Istanze tramite configurazione
 E' possibile creare istanze di S7Socket e S7tag passando direttamente l'oggetto che li identifica (ad esempio configurando il condig.json in modo opportuno).
 
 ## TODO
