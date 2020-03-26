@@ -141,7 +141,7 @@ class S7Comm {
         // Items Add
         for(let i = 0; i < itemsCount; i++) {
             let item = tags[i];
-            let itemRequest = this.#readItemRequest(item.parameterArea, item.db, item.offset, item.bytesSize, false);
+            let itemRequest = this.#readItemRequest(item.parameterArea, item.db, item.offset, item.bytesSize, item.bit);
             ret = ret.concat(itemRequest);
         }
         return ret;
@@ -188,7 +188,7 @@ class S7Comm {
     }
 
     // S7 Variable MultiRead Item
-    static #readItemRequest = (parArea, areaNumber, start, len, isBit) => {
+    static #readItemRequest = (parArea, areaNumber, start, len, bit) => {
         // Request
         let ret = [];
         ret[0] = 0x12; // Var spec.
@@ -210,8 +210,8 @@ class S7Comm {
                 ret[3] = parArea;
                 break;
             default:
-                ret[3] = (isBit ? DataType.Bit : DataType.Byte);
-                start *= (isBit) ? 1 : 8;
+                ret[3] = (bit != null ? DataType.Bit : DataType.Byte);
+                start = start * 8 + (bit != null ? bit : 0);
                 break;
         }
         // Num Elements > length in bytes
@@ -223,6 +223,7 @@ class S7Comm {
         // Area Code
         ret[8] = parArea;  
         // Start address in bits
+        // Sample: M5.3 > (5 * 8) + 3
         ret[9] = Math.floor(start / 0x10000);
         ret[10] = Math.floor(start / 0x100);
         ret[11] = (start % 0x100);
@@ -483,10 +484,21 @@ class S7Comm {
                 // add a null in tag value response
                 results.push({Tag: tag, Value: null});
             }
-            // ATT: in tagResponse[1] there is the DataType to know how to manage the SIZE.
-            // I supposed to read only bytes > the SIZE is in bits
+            // Tag size
             let itemBitsLength = tagResponse[2] * 256 + tagResponse[3];
-            let itemBytesLength = itemBitsLength / 8;
+            // Check tag type: 0x03 Bit, 0x04 Byte, 0x05 Int, 0x07 Real, 0x09 Octet
+            let itemBytesLength = 0;
+            let tagType = tagResponse[1];
+            switch(tagType) {
+                case 0x03: // bit
+                    itemBytesLength = itemBitsLength;
+                    break;
+                case 0x04: // Byte
+                case 0x05: // Int
+                case 0x07: // Real
+                    itemBytesLength = itemBitsLength / 8;
+                    break;
+            }
             // assert tag result bytes length
             if (itemBytesLength != tag.bytesSize) {
                 // Error reading tag bytes size

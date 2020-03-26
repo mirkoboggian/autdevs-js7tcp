@@ -23,8 +23,8 @@ class S7Tag extends events {
         this.db = db != null ? parseInt(db) : null;
         this.areaCode = areaCode != null ? areaCode.toUpperCase() : areaCode;
         this.typeCode = typeCode != null ? typeCode.toUpperCase() : typeCode;
-        this.offset = offset != null ? parseInt(offset) : null;
-        this.bit = bit != null ? parseInt(bit) : null;
+        this.offset = offset != null ? parseInt(offset) : null;        
+        this.bit = bit != null ? parseInt(bit) : null; 
         this.array = array != null ? parseInt(array) : null;
 
         // area, type and offset must setted!
@@ -33,25 +33,24 @@ class S7Tag extends events {
             throw err;
         }
 
-        // Id db has value then type must be DB!
-        if (this.db != null && this.areaCode != "DB") {
-            let err = new Error("Invalid S7Path: when define a DB the type must be 'DB' and not '" + this.areaCode + "'");
-            throw err;
-        } 
-
-        // Can access bits only from Byte type
-        if (this.bit!= null && this.typeCode != "B") {
-            let err = new Error("Invalid S7Path: %bit must be an 'B' and not a '" + this.typeCode + "'");
+        if (this.typeCode == "X" && this.bit == null) {
+            let err = new Error("Invalid S7Path: bit must be set in BIT type");
             throw err;
         }
 
         // Id db has value then type must be DB!
+        if (this.db != null && this.areaCode != "DB") {
+            let err = new Error("Invalid S7Path: when define a DB the type must be 'DB' and not '" + this.areaCode + "'");
+            throw err;
+        }         
+
+        // bit and array cannot be both set!
         if (this.bit!= null && this.array!= null) {
             let err = new Error("Invalid S7Path: bit and array cannot be both set!");
             throw err;
         }
 
-        // Id db has value then type must be DB!
+        // string must be define an array size!
         if (this.typeCode == "S" && this.array == null) {
             let err = new Error("Invalid S7Path: string must be define an array size (string len)!");
             throw err;
@@ -83,9 +82,9 @@ class S7Tag extends events {
     static fromPath(symbol, path) {
         let re_db = "(db(?<db>[0-9]+).)?";
         let re_area = "(?<area>db{1}|m{1}|e{1}|a{1}){1}";
-        let re_type = "(?<type>b{1}|c{1}|w{1}|i{1}|r{1}|s{1}|ub{1}|ui{1}|dw{1}|di{1}|ud{1}){1}";
+        let re_type = "(?<type>x{1}|b{1}|c{1}|w{1}|i{1}|r{1}|s{1}|ub{1}|ui{1}|dw{1}|di{1}|ud{1}){1}";
         let re_offset = "(?<offset>[0-9]+){1}";    
-        let re_bit = "(.%(?<bit>[0-7]{1})){1}"
+        let re_bit = "(.(?<bit>[0-7]{1})){1}"
         let re_array = "(\\[(?<array>[0-9]+)\\]){1}"
         let re_bit_array = "(" + re_bit + "|" + re_array + ")?";
         let re_end = "$"
@@ -119,12 +118,12 @@ class S7Tag extends events {
      */
     getPath() {
         let toRet = "";
-        toRet += this.db ? "DB" + this.db + "." : "";
+        toRet += this.db != null ? "DB" + this.db + "." : "";
         toRet += this.areaCode;
         toRet += this.typeCode;
         toRet += this.offset;
-        toRet += this.bit ? ".%" + this.bit : "";
-        toRet += this.array ? "[" + this.array + "]" : "";
+        toRet += this.bit != null ? "." + this.bit : "";
+        toRet += this.array != null ? "[" + this.array + "]" : "";
         return toRet;
     }
 
@@ -181,7 +180,8 @@ class S7Tag extends events {
      */
     fromBytes(bytes) {
         let func = DataType.Info[this.typeCode].fromBytes;
-        if(this.typeCode=="S") return func(bytes);
+        if(this.bit!=null) return func(bytes, this.bit);
+        if(this.typeCode=="S") return func(bytes);        
         if (this.array) {
             let ret = [];
             let len = this.bytesSize / this.array;
