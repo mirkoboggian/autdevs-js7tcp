@@ -1,25 +1,22 @@
 {
-  "name": "s7tcp",
+  "name": "node-s7tcp",
   "version": "1.0.0",
   "description": "S7Tcp (S7 ISO-on-TCP) is a Siemens proprietary protocol that runs between programmable logic controllers (PLCs) of the Siemens S7-300/400 (S71200/1500) family.",
   "main": "index.js",
-  "dependencies": {
-    "async-lock": "github:mirkoboggian/async-lock"
-  },
+  "dependencies": {},
   "devDependencies": {},
   "scripts": {
     "generate-docs": "jsdoc -c ./jsdoc/config.json",
-    "sample1": "node ./test/index_1.js",
-    "sample2": "node ./test/index_2.js"
+    "sample1": "node ./test/index_1.js"
   },
   "author": "Mirko Boggian <mirko.boggian@gmail.com> (http://www.mirkoboggian.com)",
   "license": "UNLICENSED",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/mirkoboggian/s7tcp.git"
+    "url": "git+https://github.com/mirkoboggian/node-s7tcp.git"
   },
   "bugs": {
-    "url": "https://github.com/mirkoboggian/s7tcp/issues"
+    "url": "https://github.com/mirkoboggian/node-s7tcp/issues"
   },
-  "homepage": "https://github.com/mirkoboggian/s7tcp#readme"
+  "homepage": "https://github.com/mirkoboggian/node-s7tcp#readme"
 }
