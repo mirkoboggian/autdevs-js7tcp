@@ -438,6 +438,7 @@ class S7Comm {
      * @returns {Boolean} Response as true or throw as Error
      */
     static negotiatePDULengthResponse = (response) => {
+        // 25, 26: PDU Length negotiated
         // check response length
         if (response.length != 27) {
             let e = new Error("Error negotiating PDU!");

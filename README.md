@@ -55,6 +55,8 @@ Le proprietà permettono anche di creare elenchi/gruppi ordinati di Tag ordinati
 E' possibile creare istanze di S7Socket e S7tag passando direttamente l'oggetto che li identifica (ad esempio configurando il condig.json in modo opportuno).
 
 ## TODO
+* Effettuare un PING prima di tentare la connessione riduce i tempi di attesa in caso di device non connesso
+* Aggiungere eventuali Timeout sulle richeiste di lettura/scrittura (non credo siano necessari)
 * Letture/Scritture a Bit (native e a byte)
 * TagPath: L'espressione regolare non è GARANTITA. Non sono un esperto. Chi può la migliori.
 * Se una richiesta di lettura/scittura esce dai limiti di protocollo serve splittare la richiesta in multirichieste.

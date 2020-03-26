@@ -10,6 +10,23 @@ const getStringSize = (len) => { return 8 * (len + 2);}
 const RetNull = () => {return null}
 //#endregion
 
+//#region Bits
+const BitToBytes = (byte, value, bit) => {
+  if (value) return SetBit(byte, bit);
+  else return ClearBit(byte, bit);
+};
+const BytesToBit = (array, bit) => {
+  return (array[0] >> bit) & 1;
+}
+const ClearBit = (byte, bit) => {
+  const mask = ~(1 << bit);
+  return byte & mask;
+}
+const SetBit = (byte, bit) => {
+  return byte | (1 << bit);
+}
+//#endregion
+
 //#region Conversions to Bytes
 const ByteToBytes = (val) => {
   let buf = new Buffer.alloc(1);
@@ -140,7 +157,7 @@ var DataType = {
     String: 0xFF, // NOT DEFINED IN S7 PROTOCOL
     // Utils
     Info: {
-      "%":  {index: 0x01, name: "Bit",      size: get8BitSize,    toBytes: RetNull,       fromBytes: RetNull,        default: 0x00  }, // S7 sends 1 byte per bit
+      "%":  {index: 0x01, name: "Bit",      size: get8BitSize,    toBytes: BitToBytes,    fromBytes: BytesToBit,     default: 0x00  }, // S7 sends 1 byte per bit
       "B":  {index: 0x02, name: "Byte",     size: get8BitSize,    toBytes: ByteToBytes,   fromBytes: BytesToByte,    default: 0x00  },
       "UB": {index: 0x02, name: "UByte",    size: get8BitSize,    toBytes: ByteToBytes,   fromBytes: BytesToByte,    default: 0x00  },
       "C":  {index: 0x03, name: "Char",     size: get8BitSize,    toBytes: CharToBytes,   fromBytes: BytesToChar,    default: ''    },
