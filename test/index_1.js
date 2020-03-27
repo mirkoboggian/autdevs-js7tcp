@@ -1,7 +1,7 @@
 const { S7Socket } = require("./../s7socket");
 const S7Tag = require("./../s7tag");
 
-var s7socket = new S7Socket("192.168.1.91", 102, 0, 1, 5000, 30000);
+var s7socket = new S7Socket("192.168.1.91", 102, 0, 1, 5000, 30000, 3000);
 
 let Db1DbR3600 = S7Tag.fromPath("Db1DbR3600", "DB1.DBR3600");
 let Db3DbR3600 = S7Tag.fromPath("Db3DbR3600", "DB3.DBR3600");
@@ -23,18 +23,18 @@ let tags = [Db1DbR3600, Db1DbS3604, Db1DbI3628];
 s7socket.on('connect', (seqNumber) => {
     console.log("CONNECTED: " + seqNumber);
 
-    setInterval(() => {
-        let d = new Date();
-        let Db1DbR3600_val = Db1DbR3600.toBytes(process.hrtime()[1]/1000);
-        let Db1DbS3604_val = Db1DbS3604.toBytes(d.toISOString().replace(/T/, ' ').replace(/\..+/, ''));
-        let Db1DbI3628_val = Db1DbI3628.toBytes([d.getFullYear(),d.getMonth(),d.getDay(),d.getHours(),d.getMinutes(),d.getSeconds(),d.getMilliseconds(),d.getUTCDay(),d.getUTCMilliseconds(),d.getUTCSeconds()]);
-        let values = [Db1DbR3600_val, Db1DbS3604_val, Db1DbI3628_val];
-        s7socket.write(tags, values);
-    }, 10);
+    // setInterval(() => {
+    //     let d = new Date();
+    //     let Db1DbR3600_val = Db1DbR3600.toBytes(process.hrtime()[1]/1000);
+    //     let Db1DbS3604_val = Db1DbS3604.toBytes(d.toISOString().replace(/T/, ' ').replace(/\..+/, ''));
+    //     let Db1DbI3628_val = Db1DbI3628.toBytes([d.getFullYear(),d.getMonth(),d.getDay(),d.getHours(),d.getMinutes(),d.getSeconds(),d.getMilliseconds(),d.getUTCDay(),d.getUTCMilliseconds(),d.getUTCSeconds()]);
+    //     let values = [Db1DbR3600_val, Db1DbS3604_val, Db1DbI3628_val];
+    //     s7socket.write(tags, values);
+    // }, 1000);
 
     setInterval(() => {
         s7socket.read(tags);
-    }, 10);
+    }, 1000);
         
 });
 

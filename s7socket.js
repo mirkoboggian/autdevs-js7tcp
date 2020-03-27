@@ -19,7 +19,7 @@ class S7Socket extends events{
      * @param {number} timeout milliseconds of socket inactivity before close
      * @param {number} rwTimeout milliseconds of waiting before acquire socket's lock for read/write operations
      */
-    constructor(ip = "127.0.0.1", port = 102, rack = 0, slot = 2, autoreconnect = 10000, timeout = 60000) {          
+    constructor(ip = "127.0.0.1", port = 102, rack = 0, slot = 2, autoreconnect = 10000, timeout = 60000, rwtimeout = 3000) {          
         // Events
         super();                
         // Local settigns
@@ -28,7 +28,8 @@ class S7Socket extends events{
         this.rack = rack;
         this.slot = slot;        
         this.autoreconnect = autoreconnect;
-        this.timeout = timeout;         
+        this.timeout = timeout;
+        this.rwtimeout = rwtimeout;  
         // Default settings  
         this.connecting = false;
         this.sequenceNumber = 0;
@@ -54,7 +55,7 @@ class S7Socket extends events{
     static fromConfig(config) {
         try {
             let s7socket = new S7Socket(config.ip, config.port, config.rack, 
-                config.slot, config.autoreconnect, config.timeout);
+                config.slot, config.autoreconnect, config.timeout, config.rwtimeout);
             return s7socket;
         } catch(e) {
             let err = new Error("This config is not a valid config for S7socket.", e.message);
@@ -89,7 +90,11 @@ class S7Socket extends events{
             this.pendingRequests.push({                
                 type: FunctionCode.RegisterSessionReq,
                 seqNumber: null,
-                tags: null
+                tags: null,
+                timeout: setTimeout(() => {
+                    let err = new Error(`(${mySeqNumber}) RegisterSession timeout`);
+                    throw err;
+                }, this.rwtimeout)
             });
         });
     }
@@ -105,7 +110,11 @@ class S7Socket extends events{
             this.pendingRequests.push({                
                 type: FunctionCode.OpenS7Connection,
                 seqNumber: mySeqNumber,
-                tags: null
+                tags: null,
+                timeout: setTimeout(() => {
+                    let err = new Error(`(${mySeqNumber}) negotiatePDULength timeout`);
+                    throw err;
+                }, this.rwtimeout)
             });
         });
     }
@@ -122,7 +131,11 @@ class S7Socket extends events{
             this.pendingRequests.push({                
                 type: FunctionCode.Read,
                 seqNumber: mySeqNumber,
-                tags: tags
+                tags: tags,
+                timeout: setTimeout(() => {
+                    let err = new Error(`(${mySeqNumber}) Read timeout`);
+                    throw err;
+                }, this.rwtimeout)
             });
         });
     }
@@ -140,7 +153,11 @@ class S7Socket extends events{
             this.pendingRequests.push({                
                 type: FunctionCode.Write,
                 seqNumber: mySeqNumber,
-                tags: tags
+                tags: tags,
+                timeout: setTimeout(() => {
+                    let err = new Error(`(${mySeqNumber}) Write timeout`);
+                    throw err;
+                }, this.rwtimeout)
             });
         });
     }
@@ -165,12 +182,18 @@ class S7Socket extends events{
                     case FunctionCode.RegisterSessionResp:
                         reqIndex = this.pendingRequests.findIndex(req => req.type == FunctionCode.RegisterSessionReq);
                         request = this.pendingRequests.splice(reqIndex, 1)[0];
+                        // clear timeout
+                        clearTimeout(request.timeout);
+                        // get response info
                         result = S7Comm.registerSessionResponse(data);
                         if (result) this.#negotiatePDULengthRequest();
                         break;
                     case FunctionCode.OpenS7Connection:
                         reqIndex = this.pendingRequests.findIndex(req => req.type == code && req.seqNumber == seqNumber);
                         request = this.pendingRequests.splice(reqIndex, 1)[0];
+                        // clear timeout
+                        clearTimeout(request.timeout);
+                        // get response info
                         result = S7Comm.negotiatePDULengthResponse(data);
                         // result == MAX PDU LENGTH
                         this.MAX_PDU_LENGTH = result;
@@ -179,12 +202,18 @@ class S7Socket extends events{
                     case FunctionCode.Read:
                         reqIndex = this.pendingRequests.findIndex(req => req.type == code && req.seqNumber == seqNumber);
                         request = this.pendingRequests.splice(reqIndex, 1)[0];
+                        // clear timeout
+                        clearTimeout(request.timeout);
+                        // get response info
                         result = S7Comm.readResponse(request.tags, data);
                         this.#emitRead(seqNumber, result);
                         break;
                     case FunctionCode.Write:
                         reqIndex = this.pendingRequests.findIndex(req => req.type == code && req.seqNumber == seqNumber);
                         request = this.pendingRequests.splice(reqIndex, 1)[0];
+                        // clear timeout
+                        clearTimeout(request.timeout);
+                        // get response info
                         result = S7Comm.writeResponse(request.tags, data);
                         this.#emitWrite(seqNumber, result);
                         break;
