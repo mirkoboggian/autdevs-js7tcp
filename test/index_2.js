@@ -23,11 +23,11 @@ let Db1Dbw4 = S7Tag.fromPath("Db1Dbw4", "DB1.DBW4");
 
 s7socket.on('connect', (seqNumber) => {
     console.log("CONNECTED: " + seqNumber);
-    // s7socket.write([Db1Dbb0], [Db1Dbb0.toBytes(171)])
-    // s7socket.write([Db1Dbb1], [Db1Dbb1.toBytes(180)])
-    // s7socket.write([Db1Dbw0, Db1Dbw2, Db1Dbw4], [Db1Dbw0.toBytes(9), Db1Dbw2.toBytes(11), Db1Dbw4.toBytes(15)])
+    s7socket.write([Db1Dbb0], [Db1Dbb0.toBytes(171)])
+    s7socket.write([Db1Dbb1], [Db1Dbb1.toBytes(180)])
+    s7socket.write([Db1Dbw0, Db1Dbw2, Db1Dbw4], [Db1Dbw0.toBytes(9), Db1Dbw2.toBytes(11), Db1Dbw4.toBytes(15)])
     s7socket.write([Db1DbX0_0, Db1DbX0_1, Db1DbX0_2], [Db1DbX0_0.toBytes(true), Db1DbX0_1.toBytes(false), Db1DbX0_2.toBytes(true)])
-    // s7socket.read([Db1DbX1_0, Db1DbX1_1, Db1DbX1_2, Db1Dbw0, Db1Dbb0, Db1Dbb1]);
+    s7socket.read([Db1DbX1_0, Db1DbX1_1, Db1DbX1_2, Db1Dbw0, Db1Dbb0, Db1Dbb1]);
 });
 
 s7socket.on('error', (error) => {
