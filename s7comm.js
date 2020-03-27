@@ -258,19 +258,21 @@ class S7Comm {
         let ret = [];
         // Header
         ret = ret.concat(this.#writeHeaderRequest(values, seqNumber));
-        // Items Add
+        // Items & Values Add
         let itemsCount = tags.length;
+        let itemsToAdd = [];
+        let valuesToAdd = [];
         for(let i = 0; i < itemsCount; i++) {
+            // Items
             let item = tags[i];
-            let itemRequest = this.#writeItemRequest(item.parameterArea, item.db, item.offset, item.bytesSize, false);
-            ret = ret.concat(itemRequest);
-        }
-        // Values Add
-        for(let i = 0; i < itemsCount; i++) {
+            let itemRequest = this.#writeItemRequest(item.parameterArea, item.db, item.offset, item.bytesSize, item.bit);
+            itemsToAdd = itemsToAdd.concat(itemRequest);
+            // Values
             let itemValue = values[i];
-            let itemValueRequest = this.#writeItemValuesRequest(itemValue);
-            ret = ret.concat(itemValueRequest);
+            let itemValueRequest = this.#writeItemValuesRequest(itemValue, item.bit);
+            valuesToAdd = valuesToAdd.concat(itemValueRequest);
         }
+        ret = ret.concat(itemsToAdd).concat(valuesToAdd);
         return ret;
     }
 
@@ -280,9 +282,8 @@ class S7Comm {
         let itemsCount = itemsValues.length;
         let itemsLen = 0;
         itemsValues.forEach((entry) => {
-            // Normalize values: Only Even bytes of values
-            if (entry.length % 2 == 1) entry.push(0x00);
-            itemsLen += entry.length + 4;
+            if(entry.length % 2 == 1) itemsLen += entry.length + 1 + 4;
+            else itemsLen += entry.length + 4;
         });
 
         // Consts
@@ -324,7 +325,7 @@ class S7Comm {
     }
 
     // S7 Variable MultiWrite Item
-    static #writeItemRequest = (parArea, areaNumber, start, len, isBit) => {
+    static #writeItemRequest = (parArea, areaNumber, start, len, bit) => {
         // Request
         let ret = [];
         ret[0] = 0x12; // Var spec.
@@ -350,10 +351,10 @@ class S7Comm {
                 ret[5] = (((len + 1) / 2) % 0x100);
                 break;
             default:
-                ret[3] = (isBit ? DataType.Bit : DataType.Byte);
+                ret[3] = (bit != null ? DataType.Bit : DataType.Byte);
                 ret[4] = Math.floor(len / 0x100);
                 ret[5] = (len % 0x100);
-                start *= (isBit) ? 1 : 8;
+                start = start * 8 + (bit != null ? bit : 0);
                 break;
         }
         // DB Number (if any, else 0) 
@@ -369,19 +370,31 @@ class S7Comm {
     }
 
     // S7 Variable MultiWrite Values
-    static #writeItemValuesRequest = (values) => {
-        // Normalize values: Only Even bytes of values
-        if (values.length % 2 == 1) values.push(0x00);
+    static #writeItemValuesRequest = (values, bit) => {                
         // Request
         let ret = [];
         // Write Header Values
         ret[0] = 0x00;
-        ret[1] = 0x04; // Bit = 3, Counter/Timer = 9, Byte/Word/DWord.. = 4
-        ret[2] = Math.floor(values.length * 8 / 0x100); // Counter/Timer *= 2, Else *= 8
-        ret[3] = (values.length * 8 % 0x100); // Counter/Timer *= 2, Else *= 8
+        // Set tag type: 0x03 Bit, 0x04 Byte, 0x05 Int, 0x07 Real, 0x09 Octet
+        let len = 0;
+        if (bit != null) {
+            // Bit: values length = 1 (without normalization)
+            len = 1;
+            ret[1] = 0x03;
+            ret[2] = Math.floor(len / 0x100);
+            ret[3] = (len % 0x100); 
+        } else {
+            // Others (No Counter/Timer)
+            len = values.length;
+            ret[1] = 0x04;
+            ret[2] = Math.floor((values.length * 8) / 0x100);
+            ret[3] = ((values.length * 8) % 0x100); 
+        }
         // Add Values
         let valArray = Array.prototype.slice.call(values, 0);    
         ret = ret.concat(valArray);
+        // Normalize values: Only Even bytes of values
+        if (values.length % 2 == 1) ret.push(0x00);
         // Return
         return ret;
     }

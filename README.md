@@ -59,6 +59,7 @@ E' possibile creare istanze di S7Socket e S7tag passando direttamente l'oggetto 
 * Letture/Scritture a Bit (native e a byte)
 * TagPath: L'espressione regolare non è GARANTITA. Non sono un esperto. Chi può la migliori.
 * Se una richiesta di lettura/scittura esce dai limiti di protocollo serve splittare la richiesta in multirichieste.
+* Aggiungere letture/Scritture su S5Time (tramite conversione in bytes)
 
 ## NOTE
 * Le letture/scritture Timer/Contatori non verranno mai testate/implementate.

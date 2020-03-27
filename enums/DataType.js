@@ -28,47 +28,47 @@ const BitToBytes = (val) => {
 const ByteToBytes = (val) => {
   let buf = new Buffer.alloc(1);
   buf[0] = val;
-  return buf;
+  return Array.from(buf);
 };
 const CharToBytes = (val) => {
   let buf = new Buffer.alloc(1);
   let ret = buf.write(val);
-  return buf;
+  return Array.from(buf);
 };
 const WordToBytes = (val) => {
   let buf = new Buffer.alloc(2);
   let ret = buf.writeInt16BE(val);
-  return buf;
+  return Array.from(buf);
 };
 const IntToBytes = (val) => {
   let buf = new Buffer.alloc(2);
   let ret = buf.writeInt16BE(val);
-  return buf;
+  return Array.from(buf);
 };
 const UIntToBytes = (val) => {
   let buf = new Buffer.alloc(2);
   let ret = buf.writeUInt16BE(val);
-  return buf;
+  return Array.from(buf);
 };
 const DWordToBytes = (val) => {
   let buf = new Buffer.alloc(2);
   let ret = buf.writeInt32BE(val);
-  return buf;
+  return Array.from(buf);
 };
 const DIntToBytes = (val) => {
   let buf = new Buffer.alloc(4);
   let ret = buf.writeInt32BE(val);
-  return buf;
+  return Array.from(buf);
 };
 const UDIntToBytes = (val) => {
   let buf = new Buffer.alloc(4);
   let ret = buf.writeUInt32BE(val);
-  return buf;
+  return Array.from(buf);
 };
 const RealToBytes = (val) => {  
   let buf = new Buffer.alloc(4);
   let ret = buf.writeFloatBE(val);
-  return buf;
+  return Array.from(buf);
 };
 const StringToBytes = (val, maxLen) => {
   let len = maxLen + 2;
@@ -77,7 +77,7 @@ const StringToBytes = (val, maxLen) => {
   buf[1] = val.length;  
   let strBytes = Buffer.from(val, 'utf8');
   strBytes.copy(buf, 2);
-  return buf;
+  return Array.from(buf);
 };
 //#endregion
 
