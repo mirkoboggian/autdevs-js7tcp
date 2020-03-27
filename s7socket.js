@@ -93,7 +93,7 @@ class S7Socket extends events{
                 tags: null,
                 timeout: setTimeout(() => {
                     let err = new Error(`(${mySeqNumber}) RegisterSession timeout`);
-                    throw err;
+                    this.#onError(er);
                 }, this.rwtimeout)
             });
         });
@@ -113,7 +113,7 @@ class S7Socket extends events{
                 tags: null,
                 timeout: setTimeout(() => {
                     let err = new Error(`(${mySeqNumber}) negotiatePDULength timeout`);
-                    throw err;
+                    this.#onError(er);
                 }, this.rwtimeout)
             });
         });
@@ -134,7 +134,7 @@ class S7Socket extends events{
                 tags: tags,
                 timeout: setTimeout(() => {
                     let err = new Error(`(${mySeqNumber}) Read timeout`);
-                    throw err;
+                    this.#onError(er);
                 }, this.rwtimeout)
             });
         });
@@ -156,7 +156,7 @@ class S7Socket extends events{
                 tags: tags,
                 timeout: setTimeout(() => {
                     let err = new Error(`(${mySeqNumber}) Write timeout`);
-                    throw err;
+                    this.#onError(er);
                 }, this.rwtimeout)
             });
         });

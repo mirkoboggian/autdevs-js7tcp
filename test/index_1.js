@@ -23,18 +23,18 @@ let tags = [Db1DbR3600, Db1DbS3604, Db1DbI3628];
 s7socket.on('connect', (seqNumber) => {
     console.log("CONNECTED: " + seqNumber);
 
-    // setInterval(() => {
-    //     let d = new Date();
-    //     let Db1DbR3600_val = Db1DbR3600.toBytes(process.hrtime()[1]/1000);
-    //     let Db1DbS3604_val = Db1DbS3604.toBytes(d.toISOString().replace(/T/, ' ').replace(/\..+/, ''));
-    //     let Db1DbI3628_val = Db1DbI3628.toBytes([d.getFullYear(),d.getMonth(),d.getDay(),d.getHours(),d.getMinutes(),d.getSeconds(),d.getMilliseconds(),d.getUTCDay(),d.getUTCMilliseconds(),d.getUTCSeconds()]);
-    //     let values = [Db1DbR3600_val, Db1DbS3604_val, Db1DbI3628_val];
-    //     s7socket.write(tags, values);
-    // }, 1000);
+    setInterval(() => {
+        let d = new Date();
+        let Db1DbR3600_val = Db1DbR3600.toBytes(process.hrtime()[1]/1000);
+        let Db1DbS3604_val = Db1DbS3604.toBytes(d.toISOString().replace(/T/, ' ').replace(/\..+/, ''));
+        let Db1DbI3628_val = Db1DbI3628.toBytes([d.getFullYear(),d.getMonth(),d.getDay(),d.getHours(),d.getMinutes(),d.getSeconds(),d.getMilliseconds(),d.getUTCDay(),d.getUTCMilliseconds(),d.getUTCSeconds()]);
+        let values = [Db1DbR3600_val, Db1DbS3604_val, Db1DbI3628_val];
+        s7socket.write(tags, values);
+    }, 100);
 
     setInterval(() => {
         s7socket.read(tags);
-    }, 1000);
+    }, 100);
         
 });
 
