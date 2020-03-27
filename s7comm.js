@@ -5,12 +5,14 @@ const PDUType = require("./enums/PDUType");
 const DataType = require("./enums/DataType");
 
 // Local Consts
-const MAXPDUSIZE = 1024;
-const MAXREADBYTES = 942;
-const MAXWRITEBYTES = 932;
+const MAXPDUSIZE = 960; // REQUEST as PDU Length (is the S7 CPU MAX limits)
+const MAXPDULENGTH = 960; // This value return as PDU response (is the S7 CPU MAX limits)
+const MAXREADBYTES = 942; // 960-18 (Read Reply telegram header): MAX PDU ON READ
+const MAXWRITEBYTES = 932; // 960-35 (Write Reply telegram header): MAX PDU ON WRITE
 const MAXITEMSLIST = 20;
 if (Object.freeze) {
     Object.freeze(MAXPDUSIZE);
+    Object.freeze(MAXPDULENGTH);
     Object.freeze(MAXREADBYTES);
     Object.freeze(MAXWRITEBYTES);
     Object.freeze(MAXITEMSLIST);
@@ -451,14 +453,15 @@ class S7Comm {
      * @param {Array} response Array of byte, the response on "negotiate PDU length request"
      * @returns {Boolean} Response as true or throw as Error
      */
-    static negotiatePDULengthResponse = (response) => {
-        // 25, 26: PDU Length negotiated
+    static negotiatePDULengthResponse = (response) => {        
         // check response length
         if (response.length != 27) {
             let e = new Error("Error negotiating PDU!");
             throw e;
         }
-        return true;
+        // 25, 26: PDU Length negotiated
+        let pduLength = response[25] * 256 + response[26];
+        return pduLength;
     }
 
     /**

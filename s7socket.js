@@ -172,6 +172,8 @@ class S7Socket extends events{
                         reqIndex = this.pendingRequests.findIndex(req => req.type == code && req.seqNumber == seqNumber);
                         request = this.pendingRequests.splice(reqIndex, 1)[0];
                         result = S7Comm.negotiatePDULengthResponse(data);
+                        // result == MAX PDU LENGTH
+                        this.MAX_PDU_LENGTH = result;
                         if (result) this.#emitConnect(seqNumber);
                         break;
                     case FunctionCode.Read:
