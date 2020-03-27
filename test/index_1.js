@@ -9,8 +9,8 @@ let Db5DbR3600 = S7Tag.fromPath("Db5DbR3600", "DB5.DBR3600");
 let Db1DbS3604 = S7Tag.fromPath("Db1DbS3604", "DB1.DBS3604[20]");
 let Db1DbI3628 = S7Tag.fromPath("Db1DbI3628", "DB1.DBI3628[10]");
 let Db1DwR3600 = S7Tag.fromPath("Db1DwR3600", "DB1.DBW3600");
-let Db1DbR3600_5 = S7Tag.fromPath("Db1DbR3600_5", "DB1.DBB3600.%5");
-let Db1DbR3600_3 = S7Tag.fromPath("Db1DbR3600_3", "DB1.DBB3600.%3");
+let Db1DbR3600_5 = S7Tag.fromPath("Db1DbR3600_5", "DB1.DBX3600.5");
+let Db1DbR3600_3 = S7Tag.fromPath("Db1DbR3600_3", "DB1.DBX3600.3");
 
 // let sortedTags = [Db5DbR3600, Db1DbR3600, Db1DbI3628, Db1DbR3600_5, Db1DbS3604, Db1DwR3600, Db1DbR3600_3, Db3DbR3600].sort(S7Tag.sorter);
 // console.log(sortedTags);
