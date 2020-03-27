@@ -8,7 +8,7 @@ const DataType = require("./enums/DataType");
 const MAXPDUSIZE = 960; // REQUEST as PDU Length (is the S7 CPU MAX limits)
 const MAXPDULENGTH = 960; // This value return as PDU response (is the S7 CPU MAX limits)
 const MAXREADBYTES = 942; // 960-18 (Read Reply telegram header): MAX PDU ON READ
-const MAXWRITEBYTES = 932; // 960-35 (Write Reply telegram header): MAX PDU ON WRITE
+const MAXWRITEBYTES = 925; // 960-35 (Write Reply telegram header): MAX PDU ON WRITE
 const MAXITEMSLIST = 20;
 if (Object.freeze) {
     Object.freeze(MAXPDUSIZE);
