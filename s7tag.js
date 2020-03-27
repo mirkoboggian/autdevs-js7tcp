@@ -259,6 +259,39 @@ class S7Tag extends events {
         return t2.offset - t1.offset;
     }
 
+    /**
+     * Tags total bytes to read each
+     * @param {S7Tag} t1 First tag
+     * @param {S7Tag} t2 Second tag
+     * @returns {number} The total bytes to read each
+     */
+    static bytesTotal(t1, t2) {
+        return S7Tag.bytesDistance(t1, t2) + t2.getBytesSize();
+    }
+
+    /**
+     * Convert bytes to tags' values
+     * @param {Array} tags Array of Tags
+     * @param {Array} values Array of bytes (raw representation of tag's value)
+     * @returns {Array} Array of object {Tag, Value}
+     */
+    static TagsValueFromBytes(tags, values) {
+        // results' array
+        let ret = [];
+        // get first tag offset (i supposed it's the 0 index of array of bytes)
+        let sortedTags = tags.sort(S7Tag.sorter);
+        let firstOffset = sortedTags[0].offset;
+        tags.forEach(tag => {
+            let tagLen = tag.getBytesSize();
+            let tagOffset = tag.offset - firstOffset;
+            let tagBytes = values.slice(tagOffset, tagOffset + tagLen);
+            let value = tag.fromBytes(tagBytes)
+            ret.push({ tag: tag, value: value});
+        });
+        // result
+        return ret;
+    }
+
 }
 
 module.exports = S7Tag;

@@ -12,12 +12,6 @@ let Db1DwR3600 = S7Tag.fromPath("Db1DwR3600", "DB1.DBW3600");
 let Db1DbR3600_5 = S7Tag.fromPath("Db1DbR3600_5", "DB1.DBX3600.5");
 let Db1DbR3600_3 = S7Tag.fromPath("Db1DbR3600_3", "DB1.DBX3600.3");
 
-// let sortedTags = [Db5DbR3600, Db1DbR3600, Db1DbI3628, Db1DbR3600_5, Db1DbS3604, Db1DwR3600, Db1DbR3600_3, Db3DbR3600].sort(S7Tag.sorter);
-// console.log(sortedTags);
-// console.log(S7Tag.bytesDistance(Db1DbR3600, Db3DbR3600));
-// console.log(S7Tag.bytesDistance(Db1DbS3604, Db1DbI3628));
-// console.log(S7Tag.bytesDistance(Db1DwR3600, Db1DbR3600_3));
-
 let tags = [Db1DbR3600, Db1DbS3604, Db1DbI3628];
 
 s7socket.on('connect', (seqNumber) => {
@@ -30,11 +24,11 @@ s7socket.on('connect', (seqNumber) => {
         let Db1DbI3628_val = Db1DbI3628.toBytes([d.getFullYear(),d.getMonth(),d.getDay(),d.getHours(),d.getMinutes(),d.getSeconds(),d.getMilliseconds(),d.getUTCDay(),d.getUTCMilliseconds(),d.getUTCSeconds()]);
         let values = [Db1DbR3600_val, Db1DbS3604_val, Db1DbI3628_val];
         s7socket.write(tags, values);
-    }, 1000);
+    }, 10);
 
     setInterval(() => {
         s7socket.read(tags);
-    }, 1000);
+    }, 10);
         
 });
 
