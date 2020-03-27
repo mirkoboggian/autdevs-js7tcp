@@ -30,11 +30,11 @@ s7socket.on('connect', (seqNumber) => {
         let Db1DbI3628_val = Db1DbI3628.toBytes([d.getFullYear(),d.getMonth(),d.getDay(),d.getHours(),d.getMinutes(),d.getSeconds(),d.getMilliseconds(),d.getUTCDay(),d.getUTCMilliseconds(),d.getUTCSeconds()]);
         let values = [Db1DbR3600_val, Db1DbS3604_val, Db1DbI3628_val];
         s7socket.write(tags, values);
-    }, 100);
+    }, 1000);
 
     setInterval(() => {
         s7socket.read(tags);
-    }, 100);
+    }, 1000);
         
 });
 

@@ -15,6 +15,7 @@ Rispetto ai progetti sopra elencati questo è un semplice driver di scambio dati
 * Output
 
 L'S7Socket apre una socket verso il device e la gestisce in maniera completamente asincrona utilizzando l'id sequenziale di ogni richiesta.
+Ho testato parecchie letture/scritture a intervalli di 10ms e l'unico limite è la console che non riesce a mostrare l'output.
 
 ## Limiti del driver
 Al momento il Driver è stato realizzato con queste caratteristiche:

@@ -87,11 +87,14 @@ class S7Socket extends events{
         let request = Uint8Array.from(S7Comm.registerSessionRequest(this.rack, this.slot));
         this.socket.write(request, (error) => {
             if (error) this.#onError(error);
-            this.pendingRequests.push({                
+            let index = this.pendingRequests.push({                
                 type: FunctionCode.RegisterSessionReq,
                 seqNumber: null,
                 tags: null,
                 timeout: setTimeout(() => {
+                    // unqueue request
+                    request = this.pendingRequests.splice(index, 1)[0];
+                    // manage error
                     let err = new Error(`(${mySeqNumber}) RegisterSession timeout`);
                     this.#onError(err);
                 }, this.rwtimeout)
@@ -107,11 +110,14 @@ class S7Socket extends events{
         let request = Uint8Array.from(S7Comm.negotiatePDULengthRequest(mySeqNumber));
         this.socket.write(request, (error) => {
             if (error) this.#onError(error);
-            this.pendingRequests.push({                
+            let index = this.pendingRequests.push({                
                 type: FunctionCode.OpenS7Connection,
                 seqNumber: mySeqNumber,
                 tags: null,
                 timeout: setTimeout(() => {
+                    // unqueue request
+                    request = this.pendingRequests.splice(index, 1)[0];
+                    // manage error
                     let err = new Error(`(${mySeqNumber}) negotiatePDULength timeout`);
                     this.#onError(err);
                 }, this.rwtimeout)
@@ -128,11 +134,14 @@ class S7Socket extends events{
         let request = Uint8Array.from(S7Comm.readRequest(tags, mySeqNumber));
         this.socket.write(request, (error) => {
             if (error) this.#onError(error);
-            this.pendingRequests.push({                
+            let index = this.pendingRequests.push({                
                 type: FunctionCode.Read,
                 seqNumber: mySeqNumber,
                 tags: tags,
                 timeout: setTimeout(() => {
+                    // unqueue request
+                    request = this.pendingRequests.splice(index, 1)[0];
+                    // manage error
                     let err = new Error(`(${mySeqNumber}) Read timeout`);
                     this.#onError(err);
                 }, this.rwtimeout)
@@ -150,12 +159,15 @@ class S7Socket extends events{
         let request = Uint8Array.from(S7Comm.writeRequest(tags, values, mySeqNumber));
         this.socket.write(request, (error) => {
             if (error) this.#onError(error);
-            this.pendingRequests.push({                
+            let index = this.pendingRequests.push({                
                 type: FunctionCode.Write,
                 seqNumber: mySeqNumber,
                 tags: tags,
                 timeout: setTimeout(() => {
-                    let err = new Error(`(${mySeqNumber}) Write timeout`);
+                    // unqueue request
+                    request = this.pendingRequests.splice(index, 1)[0];
+                    // manage error
+                    let err = new Error(`(${mySeqNumber}) Write timeout`);                    
                     this.#onError(err);
                 }, this.rwtimeout)
             });
