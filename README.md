@@ -1,6 +1,8 @@
 # S7Tcp
 **S7TCP** permette di scambiare dati "non ottimizzati" in lettura/scrittura con alcuni modelli dei PLC Siemens (S7300/400, S71200/1500).
 Il progetto è stato creato e testato su MacOSX utilizzando Visual Studio Code e non utilizza alcun package esterno.
+Le richieste via socket sono gestite in maniera asincrona.
+Ho testato parecchie letture/scritture a intervalli di 10ms e l'unico limite è la console che non riesce a mostrare l'output.
 
 ## Caratteristiche del driver
 La base di questo progetto è un mio progetto C# sviluppato circa 10 anni fa e realizzato semplicemente tramite Reverse-Engineering. 
@@ -13,9 +15,6 @@ Rispetto ai progetti sopra elencati questo è un semplice driver di scambio dati
 * Merker
 * Input
 * Output
-
-L'S7Socket apre una socket verso il device e la gestisce in maniera completamente asincrona utilizzando l'id sequenziale di ogni richiesta.
-Ho testato parecchie letture/scritture a intervalli di 10ms e l'unico limite è la console che non riesce a mostrare l'output.
 
 ## Limiti del driver
 Al momento il Driver è stato realizzato con queste caratteristiche:
