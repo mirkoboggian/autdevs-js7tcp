@@ -62,15 +62,6 @@ class S7Socket extends events{
             throw err;
         }
     }
-    
-    /**
-     * Generate a Sequence number for connect/read/write request 
-     * @returns {Number} the next sequence number
-     */
-    #nextSequenceNumber = () => {
-        this.sequenceNumber = ++this.sequenceNumber % 65535;
-        return this.sequenceNumber;
-    }
 
     /**
      * Open connection to socket
@@ -105,8 +96,7 @@ class S7Socket extends events{
     /**
      * Send NegotiatePDULength Request to server
      */
-    #negotiatePDULengthRequest = () => {
-        let mySeqNumber = this.#nextSequenceNumber();
+    #negotiatePDULengthRequest = (mySeqNumber=0) => {
         let request = Uint8Array.from(S7Comm.negotiatePDULengthRequest(mySeqNumber));
         this.socket.write(request, (error) => {
             if (error) this.#onError(error);
@@ -129,8 +119,7 @@ class S7Socket extends events{
      * Send Read Request to server
      * @param {Array} tags The list of S7Tag to read
      */
-    read = (tags) => {
-        let mySeqNumber = this.#nextSequenceNumber();
+    read = (tags, mySeqNumber) => {
         let request = Uint8Array.from(S7Comm.readRequest(tags, mySeqNumber));
         this.socket.write(request, (error) => {
             if (error) this.#onError(error);
@@ -154,8 +143,7 @@ class S7Socket extends events{
      * @param {Array} tags The list of S7Tag to read
      * @param {Array} values The list of value to write
      */
-    write = (tags, values) => {
-        let mySeqNumber = this.#nextSequenceNumber();
+    write = (tags, values, mySeqNumber) => {
         let request = Uint8Array.from(S7Comm.writeRequest(tags, values, mySeqNumber));
         this.socket.write(request, (error) => {
             if (error) this.#onError(error);

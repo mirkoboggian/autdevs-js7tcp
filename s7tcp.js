@@ -1,5 +1,6 @@
-const { S7Socket } = require("s7socket");
-const S7Tag = require("s7tag");
+const events = require('events');
+const { S7Socket } = require("./s7socket");
+const S7Tag = require("./s7tag");
 
 class S7Tcp extends events {
 
@@ -9,8 +10,17 @@ class S7Tcp extends events {
      * @param {Array} tags An array of S7Tag
      */
     constructor(socket, tags) {
+        // events
         super();
+        // local
+        this.requestId = 0;
+        //socket
         this.socket = socket;
+        this.socket.on('connect', this.#onSocketConnect);
+        this.socket.on('error', this.#onSocketError);
+        this.socket.on('read', (result, seqNumber) => {});
+        this.socket.on('write', (result, seqNumber) => {});
+        // tags
         this.tags = tags;
     }
 
@@ -22,7 +32,7 @@ class S7Tcp extends events {
             // tags            
             let confTags = config.tags;
             let tags = [];
-            confTags.array.forEach(confTag => {
+            confTags.forEach(confTag => {
                 tags.push(S7Tag.fromConfig(confTag));
             });
             let s7tcp = new S7Tcp(socket, tags);
@@ -32,6 +42,26 @@ class S7Tcp extends events {
             throw err;
         }
     }
+
+    /**
+     * Generate a Sequence number for connect/read/write request 
+     * @returns {Number} the next sequence number
+     */
+    #nextRequestId = () => {
+        this.requestId = ++this.requestId % 65535;
+        return this.requestId;
+    }
+
+    #onSocketConnect = (seqNumber) => {
+        console.log(`(${seqNumber}) : SOCKET CONNESSA!`);
+        // start polling tasks
+    }
+
+    #onSocketError = (error) => {
+        console.error(error);
+    }
+
+
 
 }
 
