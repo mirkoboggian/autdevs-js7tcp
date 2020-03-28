@@ -2,6 +2,7 @@ const events = require('events');
 const util = require('util');
 const ParameterArea = require("./enums/ParameterArea");
 const DataType = require("./enums/DataType");
+const ArrayUtils = require("./utils/array");
 
 /**
  * S7Tag Class provide a safe mechanism to manage tags as S7 device needs.
@@ -19,48 +20,42 @@ class S7Tag extends events {
      */
     constructor(symbol, db, areaCode, typeCode, offset, bit, array) {
         super();
-        this.symbol = symbol;
-        this.db = db != null ? parseInt(db) : null;
-        this.areaCode = areaCode != null ? areaCode.toUpperCase() : areaCode;
-        this.typeCode = typeCode != null ? typeCode.toUpperCase() : typeCode;
-        this.offset = offset != null ? parseInt(offset) : null;        
-        this.bit = bit != null ? parseInt(bit) : null; 
-        this.array = array != null ? parseInt(array) : null;
+        this.#symbol = symbol;
+        this.#db = db != null ? parseInt(db) : null;
+        this.#areaCode = areaCode != null ? areaCode.toUpperCase() : areaCode;
+        this.#typeCode = typeCode != null ? typeCode.toUpperCase() : typeCode;
+        this.#offset = offset != null ? parseInt(offset) : null;        
+        this.#bit = bit != null ? parseInt(bit) : null; 
+        this.#array = array != null ? parseInt(array) : null;
 
         // area, type and offset must setted!
-        if (this.areaCode == null || this.typeCode == null || this.offset == null) {
+        if (this.#areaCode == null || this.#typeCode == null || this.#offset == null) {
             let err = new Error("Invalid S7Path: area, type, offset must be always setted and bit must be in range 0-7!");
             throw err;
         }
 
-        if (this.typeCode == "X" && this.bit == null) {
+        if (this.#typeCode == "X" && this.#bit == null) {
             let err = new Error("Invalid S7Path: bit must be set in BIT type");
             throw err;
         }
 
         // Id db has value then type must be DB!
-        if (this.db != null && this.areaCode != "DB") {
-            let err = new Error("Invalid S7Path: when define a DB the type must be 'DB' and not '" + this.areaCode + "'");
+        if (this.#db != null && this.#areaCode != "DB") {
+            let err = new Error("Invalid S7Path: when define a DB the type must be 'DB' and not '" + this.#areaCode + "'");
             throw err;
         }         
 
         // bit and array cannot be both set!
-        if (this.bit!= null && this.array!= null) {
+        if (this.#bit!= null && this.#array!= null) {
             let err = new Error("Invalid S7Path: bit and array cannot be both set!");
             throw err;
         }
 
         // string must be define an array size!
-        if (this.typeCode == "S" && this.array == null) {
+        if (this.#typeCode == "S" && this.#array == null) {
             let err = new Error("Invalid S7Path: string must be define an array size (string len)!");
             throw err;
         }
-
-        this.path = this.getPath();
-        this.parameterArea = this.getParameterArea();
-        this.dataType = this.getDataType();
-        this.bitsSize = this.getBitsSize();
-        this.bytesSize = this.getBytesSize();        
     }
 
     /**
@@ -113,17 +108,73 @@ class S7Tag extends events {
     }
 
     /**
+     * Return the tag's symbol
+     * @returns {string} The tag's symbol
+     */
+    getSymbol() {
+        return this.#symbol;
+    }
+
+    /**
+     * Return the tag's db
+     * @returns {numeric} The tag's db
+     */
+    getDB() {
+        return this.#db;
+    }
+
+    /**
+     * Return the tag's areaCode
+     * @returns {string} The tag's areaCode
+     */
+    getAreaCode() {
+        return this.#areaCode;
+    }
+
+    /**
+     * Return the tag's typeCode
+     * @returns {string} The tag's typeCode
+     */
+    getTypeCode() {
+        return this.#typeCode;
+    }
+
+    /**
+     * Return the tag's offset
+     * @returns {numeric} The tag's offset
+     */
+    getOffset() {
+        return this.#offset;
+    }
+
+    /**
+     * Return the tag's offset
+     * @returns {numeric} The tag's offset
+     */
+    getBit() {
+        return this.#bit;
+    }
+
+    /**
+     * Return the tag's array
+     * @returns {numeric} The tag's array
+     */
+    getArray() {
+        return this.#array;
+    }
+    
+    /**
      * Return a well formatted tag's path
      * @returns {string} The tag's path
      */
     getPath() {
         let toRet = "";
-        toRet += this.db != null ? "DB" + this.db + "." : "";
-        toRet += this.areaCode;
-        toRet += this.typeCode;
-        toRet += this.offset;
-        toRet += this.bit != null ? "." + this.bit : "";
-        toRet += this.array != null ? "[" + this.array + "]" : "";
+        toRet += this.#db != null ? "DB" + this.#db + "." : "";
+        toRet += this.#areaCode;
+        toRet += this.#typeCode;
+        toRet += this.#offset;
+        toRet += this.#bit != null ? "." + this.#bit : "";
+        toRet += this.#array != null ? "[" + this.#array + "]" : "";
         return toRet;
     }
 
@@ -132,7 +183,7 @@ class S7Tag extends events {
      * @returns {ParameterArea} The ParameterArea value
      */
     getParameterArea() {
-        let dti = ParameterArea.Info[this.areaCode].index;
+        let dti = ParameterArea.Info[this.#areaCode].index;
         return dti;
     }
 
@@ -141,8 +192,8 @@ class S7Tag extends events {
      * @returns {DataType} The DataType value
      */
     getDataType() {
-        if (this.bit) return DataType.Bit;
-        let dti = DataType.Info[this.typeCode].index;
+        if (this.#bit) return DataType.Bit;
+        let dti = DataType.Info[this.#typeCode].index;
         return dti;
     }
 
@@ -151,7 +202,7 @@ class S7Tag extends events {
      * @returns {numeric} The DataType size in bits
      */
     getBitsSize() {
-        let bitsSize = DataType.Info[this.typeCode].size(this.array ? this.array : 1);
+        let bitsSize = DataType.Info[this.#typeCode].size(this.#array ? this.#array : 1);
         return bitsSize;
     }
 
@@ -169,7 +220,7 @@ class S7Tag extends events {
      * @returns {object} The default value for s7tag dataType
      */
     getDefault() {        
-        let dv = DataType.Info[this.typeCode].default;
+        let dv = DataType.Info[this.#typeCode].default;
         return dv;
     }
 
@@ -179,13 +230,13 @@ class S7Tag extends events {
      * @returns {object} The value conversion
      */
     fromBytes(bytes) {
-        let func = DataType.Info[this.typeCode].fromBytes;
-        if(this.bit!=null) return func(bytes, this.bit);
-        if(this.typeCode=="S") return func(bytes);        
-        if (this.array) {
+        let func = DataType.Info[this.#typeCode].fromBytes;
+        if(this.#bit!=null) return func(bytes, this.#bit);
+        if(this.#typeCode=="S") return func(bytes);        
+        if (this.#array) {
             let ret = [];
-            let len = this.bytesSize / this.array;
-            for(let i=0;i<this.array;i++){
+            let len = this.bytesSize / this.#array;
+            for(let i=0;i<this.#array;i++){
                 let subBytes = bytes.slice((len*i), (len*i)+len)
                 let item = func(subBytes);
                 ret.push(item);
@@ -201,11 +252,11 @@ class S7Tag extends events {
      * @returns {Array} The Array of bytes conversion
      */
     toBytes(value) {
-        let func = DataType.Info[this.typeCode].toBytes;
-        if(this.typeCode=="S") return func(value, this.array);                
-        if (this.array) {
+        let func = DataType.Info[this.#typeCode].toBytes;
+        if(this.#typeCode=="S") return func(value, this.#array);                
+        if (this.#array) {
             let ret = [];
-            for(let i=0;i<this.array;i++){
+            for(let i=0;i<this.#array;i++){
                 let buffer = func(value[i]);
                 let itemArray = Array.prototype.slice.call(buffer, 0);
                 ret = ret.concat(itemArray);                
@@ -223,74 +274,41 @@ class S7Tag extends events {
      */
     static sorter(t1, t2) {
         // DB
-        if (t1.db != null && t2.db == null) return -1;
-        if (t1.db == null && t2.db != null) return 1;
-        if (t1.db != null && t2.db != null && t1.db != t2.db) return t1.db - t2.db; // ascending
+        if (t1.getDB() != null && t2.getDB() == null) return -1;
+        if (t1.getDB() == null && t2.getDB() != null) return 1;
+        if (t1.getDB() != null && t2.getDB() != null && t1.getDB() != t2.getDB()) return t1.getDB() - t2.getDB(); // ascending
         // AREA
-        if (t1.areaCode < t2.areaCode) return -1;
-        if (t1.areaCode > t2.areaCode) return 1;
+        if (t1.getAreaCode() < t2.getAreaCode()) return -1;
+        if (t1.getAreaCode() > t2.getAreaCode()) return 1;
         // OFFSET
-        if (t1.offset < t2.offset) return -1;
-        if (t1.offset > t2.offset) return 1;
+        if (t1.getOffset() < t2.getOffset()) return -1;
+        if (t1.getOffset() > t2.getOffset()) return 1;
         // TYPE CODE
-        if (t1.typeCode < t2.typeCode) return -1;
-        if (t1.typeCode > t2.typeCode) return 1;
+        if (t1.getTypeCode() < t2.getTypeCode()) return -1;
+        if (t1.getTypeCode() > t2.getTypeCode()) return 1;
         // BIT
-        if (t1.bit != null && t2.bit == null) return 1;
-        if (t1.bit == null && t2.bit != null) return -1;
-        if (t1.bit != null && t2.bit != null) return t1.bit - t2.bit; // ascending
+        if (t1.getBit() != null && t2.getBit() == null) return 1;
+        if (t1.getBit() == null && t2.getBit() != null) return -1;
+        if (t1.getBit() != null && t2.getBit() != null) return t1.getBit() - t2.getBit(); // ascending
         // ARRAY
-        if (t1.array != null && t2.array == null) return -1;
-        if (t1.array == null && t2.array != null) return 1;
-        if (t1.array != null && t2.array != null) return t1.array - t2.array; // ascending
+        if (t1.getArray() != null && t2.getArray() == null) return -1;
+        if (t1.getArray() == null && t2.getArray() != null) return 1;
+        if (t1.getArray() != null && t2.getArray() != null) return t1.getArray() - t2.getArray(); // ascending
         // ELSE
         return 0;
     }
 
     /**
-     * Tags distance in bytes (memory offset position)
-     * @param {S7Tag} t1 First tag
-     * @param {S7Tag} t2 Second tag
-     * @returns {number} The distance in bytes between tags, null if is not possiible get the distance
-     */
-    static bytesDistance(t1, t2) {
-        if (t1.db != null && t2.db != null && t1.db != t2.db) return null;
-        if (t1.areaCode != t2.areaCode) return null;
-        return t2.offset - t1.offset;
-    }
-
-    /**
-     * Tags total bytes to read each
-     * @param {S7Tag} t1 First tag
-     * @param {S7Tag} t2 Second tag
-     * @returns {number} The total bytes to read each
-     */
-    static bytesTotal(t1, t2) {
-        return S7Tag.bytesDistance(t1, t2) + t2.getBytesSize();
-    }
-
-    /**
-     * Convert bytes to tags' values
+     * This function groups a list of tags by its areaCode
+     * Sample use: let tagsAreaGroups = groupTagsByArea(tags);
+     * Loop through groups: Object.keys(tagsAreaGroups).forEach(tagsArea => {
+     *  let tagsInGroup = tagsAreaGroups[tagsArea];
+     * }
+     * 
      * @param {Array} tags Array of Tags
-     * @param {Array} values Array of bytes (raw representation of tag's value)
-     * @returns {Array} Array of object {Tag, Value}
+     * @returns {Object} Keys with grouped list of tags
      */
-    static TagsValueFromBytes(tags, values) {
-        // results' array
-        let ret = [];
-        // get first tag offset (i supposed it's the 0 index of array of bytes)
-        let sortedTags = tags.sort(S7Tag.sorter);
-        let firstOffset = sortedTags[0].offset;
-        tags.forEach(tag => {
-            let tagLen = tag.getBytesSize();
-            let tagOffset = tag.offset - firstOffset;
-            let tagBytes = values.slice(tagOffset, tagOffset + tagLen);
-            let value = tag.fromBytes(tagBytes)
-            ret.push({ tag: tag, value: value});
-        });
-        // result
-        return ret;
-    }
+    static groupTagsByArea = ArrayUtils.groupBy(['areaCode', 'db']);
 
 }
 

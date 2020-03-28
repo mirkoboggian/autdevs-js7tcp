@@ -19,6 +19,12 @@
         { "symbol": "DB1.DBB1", "path": "DB1.DBB1" },
         { "symbol": "DB1.DBR3600", "path": "DB1.DBR3600" },
         { "symbol": "DB1.DBS3604[20]", "path": "DB1.DBS3604[20]" },
-        { "symbol": "DB1.DBI3628[10]", "path": "DB1.DBI3628[10]" }
+        { "symbol": "DB1.DBI3628[10]", "path": "DB1.DBI3628[10]" },
+        { "symbol": "MW2", "path": "MW2" },
+        { "symbol": "MW0", "path": "MW0" },        
+        { "symbol": "EB1", "path": "EB1" },
+        { "symbol": "EB0", "path": "EB0" },        
+        { "symbol": "AB1", "path": "AB1" },
+        { "symbol": "AB0", "path": "AB0" }
     ]
 }

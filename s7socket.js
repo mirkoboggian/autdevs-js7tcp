@@ -32,8 +32,8 @@ class S7Socket extends events{
         this.rwtimeout = rwtimeout;  
         // Default settings  
         this.connecting = false;
-        this.sequenceNumber = 0;
-        this.pendingRequests = [];
+        this.sequenceId = 0;
+        this.pendingRequests = [];        
         // TCP socket + events subscriptions
         this.socket = new net.Socket();
         this.socket.on('close', this.#onClose);
