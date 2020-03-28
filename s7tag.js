@@ -2,6 +2,7 @@ const events = require('events');
 const util = require('util');
 const ParameterArea = require("./enums/ParameterArea");
 const DataType = require("./enums/DataType");
+const ArrayUtils = require("./utils/array");
 
 /**
  * S7Tag Class provide a safe mechanism to manage tags as S7 device needs.
@@ -248,49 +249,16 @@ class S7Tag extends events {
     }
 
     /**
-     * Tags distance in bytes (memory offset position)
-     * @param {S7Tag} t1 First tag
-     * @param {S7Tag} t2 Second tag
-     * @returns {number} The distance in bytes between tags, null if is not possiible get the distance
-     */
-    static bytesDistance(t1, t2) {
-        if (t1.db != null && t2.db != null && t1.db != t2.db) return null;
-        if (t1.areaCode != t2.areaCode) return null;
-        return t2.offset - t1.offset;
-    }
-
-    /**
-     * Tags total bytes to read each
-     * @param {S7Tag} t1 First tag
-     * @param {S7Tag} t2 Second tag
-     * @returns {number} The total bytes to read each
-     */
-    static bytesTotal(t1, t2) {
-        return S7Tag.bytesDistance(t1, t2) + t2.getBytesSize();
-    }
-
-    /**
-     * Convert bytes to tags' values
+     * This function groups a list of tags by its areaCode
+     * Sample use: let tagsAreaGroups = groupTagsByArea(tags);
+     * Loop through groups: Object.keys(tagsAreaGroups).forEach(tagsArea => {
+     *  let tagsInGroup = tagsAreaGroups[tagsArea];
+     * }
+     * 
      * @param {Array} tags Array of Tags
-     * @param {Array} values Array of bytes (raw representation of tag's value)
-     * @returns {Array} Array of object {Tag, Value}
+     * @returns {Object} Keys with grouped list of tags
      */
-    static TagsValueFromBytes(tags, values) {
-        // results' array
-        let ret = [];
-        // get first tag offset (i supposed it's the 0 index of array of bytes)
-        let sortedTags = tags.sort(S7Tag.sorter);
-        let firstOffset = sortedTags[0].offset;
-        tags.forEach(tag => {
-            let tagLen = tag.getBytesSize();
-            let tagOffset = tag.offset - firstOffset;
-            let tagBytes = values.slice(tagOffset, tagOffset + tagLen);
-            let value = tag.fromBytes(tagBytes)
-            ret.push({ tag: tag, value: value});
-        });
-        // result
-        return ret;
-    }
+    static groupTagsByArea = ArrayUtils.groupBy(['areaCode', 'db']);  
 
 }
 
