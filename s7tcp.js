@@ -94,7 +94,7 @@ class S7Tcp extends events {
         console.error(error);
     }
 
-
+    // End
 
 }
 
