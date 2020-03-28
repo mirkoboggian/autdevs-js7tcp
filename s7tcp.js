@@ -43,14 +43,7 @@ class S7Tcp extends events {
         }
     }
 
-    /**
-     * Generate a Sequence number for connect/read/write request 
-     * @returns {Number} the next sequence number
-     */
-    #nextRequestId = () => {
-        this.requestId = ++this.requestId % 65535;
-        return this.requestId;
-    }
+
 
     #onSocketConnect = (seqNumber) => {
         console.log(`(${seqNumber}) : SOCKET CONNESSA!`);
