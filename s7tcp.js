@@ -1,6 +1,7 @@
 const events = require('events');
 const { S7Socket } = require("./s7socket");
 const S7Tag = require("./s7tag");
+const { MAXREADBYTES } = require("./s7comm");
 
 class S7Tcp extends events {
 
@@ -22,8 +23,13 @@ class S7Tcp extends events {
         this.socket.on('write', (result, seqNumber) => {});
         // tags
         this.tags = tags;
+        this.tagTasks = this.#generateTagTasks();
     }
 
+     /**
+     * Create a S7Tcp instance using a config object
+     * @param {object} config JSON like object
+     */
     static fromConfig(config) {
         try {
             // socket
@@ -43,7 +49,41 @@ class S7Tcp extends events {
         }
     }
 
-
+    #generateTagTasks = () => {
+        // group by area
+        let areaTags = S7Tag.groupTagsByArea(this.tags);
+        // sort each area tags
+        Object.keys(areaTags).forEach(areaTag => {
+            areaTags[areaTag] = areaTags[areaTag].sort(S7Tag.sorter);
+        });
+        // create tagTasks
+        let tagTasks = [];
+        Object.keys(areaTags).forEach(areaTag => {
+            let startOffset = null;
+            areaTags[areaTag].forEach(tag => {
+                if (currentTagTask!= null && S7Tag.tagIsInTagTask(currentTagTask.task, tag)) {
+                    // add tag to tags list
+                    currentTagTask.tags.push(tag);
+                    // update array size of task (MAXREADBYTES can overflow PLC memory area)
+                    currentTagTask.task.array = S7Tag.bytesTotal(tag, currentTagTask.task);
+                } else {
+                    // create a new tagTask (polling read task)
+                    let db = tag.db;
+                    let areaCode = tag.areaCode;
+                    let typeCode = "B";
+                    let offset = tag.offset;
+                    let bit = null;
+                    let array = tag.bytesSize();
+                    let symbol = `TASK_${areaTag}_${offset}`
+                    currentTagTask = {
+                        task: new S7Tag(symbol, db, areaCode, typeCode, offset, bit, array),
+                        tags: [tag] };
+                    tagTasks.push(currentTagTask);
+                }
+            });
+        });
+        return tagTasks;
+    }
 
     #onSocketConnect = (seqNumber) => {
         console.log(`(${seqNumber}) : SOCKET CONNESSA!`);
@@ -54,7 +94,7 @@ class S7Tcp extends events {
         console.error(error);
     }
 
-
+    // End
 
 }
 
