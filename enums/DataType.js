@@ -52,7 +52,7 @@ const UIntToBytes = (val) => {
 };
 const DWordToBytes = (val) => {
   let buf = new Buffer.alloc(2);
-  let ret = buf.writeInt32BE(val);
+  let ret = buf.writeInt32(val);
   return Array.from(buf);
 };
 const DIntToBytes = (val) => {
